@@ -100,16 +100,36 @@ class _AddAnimalViewState extends State<AddAnimalView> {
               ),
               if (_newlyCreatedPets.isNotEmpty) ...[
                 const SizedBox(height: 20),
-                OutlinedButton.icon(
-                  onPressed: () => _generatePdfReport(isAr),
-                  icon: const Icon(Icons.picture_as_pdf),
-                  label: Text(isAr ? 'تحميل ملف الرموز' : 'Download PDF Report'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: isDark ? goldColor : primaryColor,
-                    side: BorderSide(color: isDark ? goldColor : primaryColor),
-                    padding: const EdgeInsets.symmetric(vertical: 15),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-                  ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () => _generateQrOnlyPdf(isAr),
+                        icon: const Icon(Icons.qr_code_scanner),
+                        label: Text(isAr ? 'ملف الرموز' : 'QR Codes PDF'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: isDark ? goldColor : primaryColor,
+                          side: BorderSide(color: isDark ? goldColor : primaryColor),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () => _generatePasswordsOnlyPdf(isAr),
+                        icon: const Icon(Icons.password_rounded),
+                        label: Text(isAr ? 'ملف كلمات السر' : 'Passwords PDF'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: isDark ? goldColor : primaryColor,
+                          side: BorderSide(color: isDark ? goldColor : primaryColor),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ]
             ],
@@ -189,7 +209,8 @@ class _AddAnimalViewState extends State<AddAnimalView> {
             backgroundColor: Colors.green,
           )
         );
-        _generatePdfReport(isAr); // فتح ملف الـ PDF تلقائياً بعد النجاح
+        // توليد الملفين تلقائياً بعد النجاح
+        _generateQrOnlyPdf(isAr).then((_) => _generatePasswordsOnlyPdf(isAr));
       }
     } catch (e) {
       setState(() => isSaving = false);
@@ -197,10 +218,44 @@ class _AddAnimalViewState extends State<AddAnimalView> {
     }
   }
 
-  Future<void> _generatePdfReport(bool isAr) async {
+  Future<void> _generateQrOnlyPdf(bool isAr) async {
     final pdf = pw.Document();
-    
-    // تحميل خطوط واضحة
+    final fontBold = await PdfGoogleFonts.amiriBold();
+
+    for (var pet in _newlyCreatedPets) {
+      pdf.addPage(
+        pw.Page(
+          pageFormat: PdfPageFormat.a4,
+          build: (context) => pw.Center(
+            child: pw.Container(
+              padding: const pw.EdgeInsets.all(12), // تصغير حواف الإطار
+              decoration: pw.BoxDecoration(
+                border: pw.Border.all(color: PdfColors.grey300, width: 0.5),
+                borderRadius: const pw.BorderRadius.all(pw.Radius.circular(10)),
+              ),
+              child: pw.Column(
+                mainAxisSize: pw.MainAxisSize.min,
+                children: [
+                  pw.Text('QPet ID: ${pet['id']}', style: pw.TextStyle(fontSize: 14, font: fontBold)), // تصغير الخط قليلاً
+                  pw.SizedBox(height: 4), // تقليل المسافة لـ 4 كما طلبت
+                  pw.BarcodeWidget(
+                    data: pet['url'],
+                    barcode: pw.Barcode.qrCode(),
+                    width: 200, // تصغير الرمز ليتناسب مع الإطار الصغير
+                    height: 200,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+    await Printing.layoutPdf(onLayout: (format) async => pdf.save(), name: isAr ? 'الرموز' : 'QR_Codes');
+  }
+
+  Future<void> _generatePasswordsOnlyPdf(bool isAr) async {
+    final pdf = pw.Document();
     final font = await PdfGoogleFonts.amiriRegular();
     final fontBold = await PdfGoogleFonts.amiriBold();
 
@@ -212,102 +267,27 @@ class _AddAnimalViewState extends State<AddAnimalView> {
         build: (context) => [
           pw.Header(
             level: 0,
-            child: pw.Row(
-              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-              children: [
-                pw.Column(
-                  crossAxisAlignment: pw.CrossAxisAlignment.start,
-                  children: [
-                    pw.Text(isAr ? 'رموز التعريف الذكية - QPet' : 'QPet Smart ID Codes', 
-                      style: pw.TextStyle(fontSize: 24, fontWeight: pw.FontWeight.bold, font: fontBold, color: PdfColors.teal900)),
-                    pw.Text(isAr ? 'تقرير الإنشاء الجماعي' : 'Batch Generation Report', 
-                      style: pw.TextStyle(fontSize: 12, font: font, color: PdfColors.grey700)),
-                  ],
-                ),
-                pw.Text(DateTime.now().toString().split(' ').first, style: pw.TextStyle(font: font)),
-              ],
-            ),
+            child: pw.Text(isAr ? 'ملف كلمات السر فقط' : 'Passwords Only Report', 
+              style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold, font: fontBold)),
           ),
-          pw.SizedBox(height: 30),
-          pw.Wrap(
-            spacing: 20,
-            runSpacing: 20,
-            children: _newlyCreatedPets.map((pet) {
-              return pw.Container(
-                width: (PdfPageFormat.a4.width - 100) / 2, 
-                padding: const pw.EdgeInsets.all(12),
-                decoration: pw.BoxDecoration(
-                  border: pw.Border.all(color: PdfColors.grey400, style: pw.BorderStyle.dashed),
-                  borderRadius: const pw.BorderRadius.all(pw.Radius.circular(15)),
-                ),
-                child: pw.Column(
-                  mainAxisSize: pw.MainAxisSize.min,
-                  children: [
-                    // إطار داخلي للبيانات الأساسية - تم تصغيره ليكون مضغوطاً جداً
-                    pw.Container(
-                      padding: const pw.EdgeInsets.all(4),
-                      decoration: pw.BoxDecoration(
-                        border: pw.Border.all(color: PdfColors.grey400),
-                        borderRadius: const pw.BorderRadius.all(pw.Radius.circular(8)),
-                      ),
-                      child: pw.Column(
-                        mainAxisSize: pw.MainAxisSize.min,
-                        children: [
-                          pw.Text(' QPet SmartID #${pet['id']}', style: pw.TextStyle(fontSize: 8, font: fontBold, color: PdfColors.teal)),
-                          pw.SizedBox(height: 3),
-                          pw.Container(
-                            padding: const pw.EdgeInsets.all(2),
-                            decoration: pw.BoxDecoration(
-                              border: pw.Border.all(color: PdfColors.grey200), 
-                              borderRadius: const pw.BorderRadius.all(pw.Radius.circular(4))
-                            ),
-                            child: pw.BarcodeWidget(
-                              data: pet['url'],
-                              barcode: pw.Barcode.qrCode(),
-                              width: 80,
-                              height: 80,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    pw.SizedBox(height: 12),
-                    // الـ ID وكلمة السر معاً
-                    pw.Container(
-                      margin: const pw.EdgeInsets.only(top: 5),
-                      padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                      decoration: pw.BoxDecoration(
-                        color: PdfColors.grey100,
-                        borderRadius: const pw.BorderRadius.all(pw.Radius.circular(8)),
-                      ),
-                      child: pw.Row(
-                        mainAxisAlignment: pw.MainAxisAlignment.center,
-                        children: [
-                          pw.Column(
-                            children: [
-                              pw.Text('ID', style: pw.TextStyle(fontSize: 7, font: font)),
-                              pw.Text('${pet['id']}', style: pw.TextStyle(fontSize: 12, font: fontBold)),
-                            ],
-                          ),
-                          pw.Container(width: 1, height: 20, color: PdfColors.grey300, margin: const pw.EdgeInsets.symmetric(horizontal: 10)),
-                          pw.Column(
-                            children: [
-                              pw.Text(isAr ? 'كلمة السر' : 'Password', style: pw.TextStyle(fontSize: 7, font: font)),
-                              pw.Text(pet['password'], style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold, font: fontBold, letterSpacing: 2)),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }).toList(),
+          pw.SizedBox(height: 20),
+          pw.TableHelper.fromTextArray(
+            headerStyle: pw.TextStyle(font: fontBold, color: PdfColors.white),
+            headerDecoration: const pw.BoxDecoration(color: PdfColors.teal),
+            cellStyle: pw.TextStyle(font: font),
+            columnWidths: {
+              0: const pw.FlexColumnWidth(1),
+              1: const pw.FlexColumnWidth(2),
+            },
+            headers: isAr ? ['المعرف (ID)', 'كلمة السر'] : ['Pet ID', 'Password'],
+            data: _newlyCreatedPets.map((pet) => [
+              pet['id'].toString(),
+              pet['password'].toString(),
+            ]).toList(),
           ),
         ],
       ),
     );
-
-    await Printing.layoutPdf(onLayout: (format) async => pdf.save());
+    await Printing.layoutPdf(onLayout: (format) async => pdf.save(), name: isAr ? 'كلمات_السر' : 'Passwords');
   }
 }

@@ -7,6 +7,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:vet/home/edit_pet_view.dart';
 import 'package:vet/main.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 class QrScannerView extends StatefulWidget {
   const QrScannerView({super.key});
@@ -286,7 +287,20 @@ class _QrScannerViewState extends State<QrScannerView> with WidgetsBindingObserv
     bool isAr = MyApp.of(context).locale.languageCode == 'ar';
     return Scaffold(
       backgroundColor: Colors.black,
-      appBar: AppBar(title: Text(isAr ? 'ماسح QPet' : 'QPet Scanner'), backgroundColor: Colors.transparent, elevation: 0, foregroundColor: Colors.white, actions: [IconButton(icon: const Icon(Icons.image), onPressed: _pickAndScanImage, tooltip: isAr ? 'مسح من المعرض' : 'Scan from Gallery')]),
+      appBar: AppBar(
+        title: Text(isAr ? 'ماسح QPet' : 'QPet Scanner'), 
+        backgroundColor: Colors.transparent, 
+        elevation: 0, 
+        foregroundColor: Colors.white, 
+        actions: [
+          if (!kIsWeb) // التحليل من الصور غير مدعوم على الويب في هذه المكتبة
+            IconButton(
+              icon: const Icon(Icons.image), 
+              onPressed: _pickAndScanImage, 
+              tooltip: isAr ? 'مسح من المعرض' : 'Scan from Gallery'
+            )
+        ]
+      ),
       body: !isPermissionGranted ? Center(child: Text(isAr ? 'يرجى إعطاء إذن الكاميرا' : 'Please grant camera permission', style: const TextStyle(color: Colors.white))) :
       Stack(children: [MobileScanner(controller: controller, onDetect: _onDetect), Center(child: Container(width: 250, height: 250, decoration: BoxDecoration(border: Border.all(color: Theme.of(context).primaryColor, width: 4), borderRadius: BorderRadius.circular(20)))), if (isProcessing) Center(child: CircularProgressIndicator(color: Theme.of(context).primaryColor))]),
     );
