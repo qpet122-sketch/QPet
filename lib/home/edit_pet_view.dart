@@ -21,7 +21,7 @@ class _EditPetViewState extends State<EditPetView> {
   final _formKey = GlobalKey<FormState>();
   
   late TextEditingController _nameController;
-  late TextEditingController _typeController; // تم التغيير لـ Controller للإدخال اليدوي
+  late TextEditingController _typeController;
   late TextEditingController _ownerNameController;
   late TextEditingController _ownerPhoneController;
   late TextEditingController _weightController;
@@ -50,7 +50,6 @@ class _EditPetViewState extends State<EditPetView> {
     _weightController = TextEditingController(text: d['weight']?.toString() ?? '');
     _ageController = TextEditingController(text: d['age']?.toString() ?? '');
     
-    // توحيد القيم للبرمجة (داخلياً) لتجنب أخطاء اللغة في الـ Dropdown
     String g = d['gender']?.toString().toLowerCase() ?? '';
     _gender = (g == 'female' || g == 'أنثى') ? 'female' : 'male';
 
@@ -65,12 +64,25 @@ class _EditPetViewState extends State<EditPetView> {
     _chronicDiseases = List<String>.from(d['chronic_diseases_list'] ?? []);
   }
 
-  Future<void> _selectDate(BuildContext context, TextEditingController controller) async {
+  Future<void> _selectDate(BuildContext context, TextEditingController controller, bool isDark) async {
     DateTime? picked = await showDatePicker(
       context: context,
       initialDate: DateTime.now(),
       firstDate: DateTime(2000),
       lastDate: DateTime(2101),
+      builder: (context, child) {
+        return Theme(
+          data: isDark ? ThemeData.dark().copyWith(
+            colorScheme: const ColorScheme.dark(
+              primary: Color(0xFFC5A059),
+              onPrimary: Colors.black87,
+              surface: Color(0xFF1E1E1E),
+              onSurface: Colors.white,
+            ),
+          ) : Theme.of(context),
+          child: child!,
+        );
+      },
     );
     if (picked != null) {
       setState(() {
@@ -106,12 +118,21 @@ class _EditPetViewState extends State<EditPetView> {
         'lastUpdated': FieldValue.serverTimestamp(),
       };
 
-      // إذا كان المعدل هو صاحب الحيوان، نربط الـ UID الخاص به لعرض السوشيال ميديا الخاصة به في الويب
       if (role == 'owner') {
         updateData['ownerUid'] = user.uid;
       }
 
       await FirebaseFirestore.instance.collection('pets').doc(widget.petId).update(updateData);
+
+      // 3. تحديث بيانات المستخدم إذا كان هو صاحب الحيوان
+      if (role == 'owner' || updateData['ownerUid'] != null) {
+        final ownerUid = updateData['ownerUid'] ?? user.uid;
+        await FirebaseFirestore.instance.collection('users').doc(ownerUid).update({
+          'name': _ownerNameController.text.trim(),
+          'phone': _ownerPhoneController.text.trim(),
+        });
+      }
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(isAr ? 'تم حفظ السجل بنجاح' : 'Record Saved Successfully')));
         Navigator.pop(context, true);
@@ -124,78 +145,83 @@ class _EditPetViewState extends State<EditPetView> {
     }
   }
 
-  void _editVaccination(bool isAr, int? index) {
+  void _editVaccination(bool isAr, int? index, bool isDark, Color gold) {
     final type = TextEditingController(text: index != null ? _vaccinations[index]['type'] : '');
     final date = TextEditingController(text: index != null ? _vaccinations[index]['date'] : '');
     final next = TextEditingController(text: index != null ? _vaccinations[index]['next'] : '');
     
     _showAddDialog(index == null ? (isAr ? 'إضافة تطعيم' : 'Add Vaccination') : (isAr ? 'تعديل تطعيم' : 'Edit Vaccination'), [
-      _buildDialogField(type, isAr ? 'النوع' : 'Type'),
-      _buildDateField(date, isAr ? 'التاريخ' : 'Date'),
-      _buildDateField(next, isAr ? 'التاريخ القادم' : 'Next Date'),
+      _buildDialogField(type, isAr ? 'النوع' : 'Type', isDark, gold),
+      _buildDateField(date, isAr ? 'التاريخ' : 'Date', isDark, gold),
+      _buildDateField(next, isAr ? 'التاريخ القادم' : 'Next Date', isDark, gold),
     ], () {
       setState(() {
         final data = {'type': type.text, 'date': date.text, 'next': next.text};
         if (index == null) { _vaccinations.add(data); } else { _vaccinations[index] = data; }
       });
-    });
+    }, isDark);
   }
 
-  void _editSurgery(bool isAr, int? index) {
+  void _editSurgery(bool isAr, int? index, bool isDark, Color gold) {
     final name = TextEditingController(text: index != null ? _surgeries[index]['name'] : '');
     final date = TextEditingController(text: index != null ? _surgeries[index]['date'] : '');
     
     _showAddDialog(index == null ? (isAr ? 'إضافة عملية' : 'Add Surgery') : (isAr ? 'تعديل عملية' : 'Edit Surgery'), [
-      _buildDialogField(name, isAr ? 'اسم العملية' : 'Surgery Name', maxLines: 2),
-      _buildDateField(date, isAr ? 'التاريخ' : 'Date'),
+      _buildDialogField(name, isAr ? 'اسم العملية' : 'Surgery Name', isDark, gold, maxLines: 2),
+      _buildDateField(date, isAr ? 'التاريخ' : 'Date', isDark, gold),
     ], () {
       setState(() {
         final data = {'name': name.text, 'date': date.text};
         if (index == null) { _surgeries.add(data); } else { _surgeries[index] = data; }
       });
-    });
+    }, isDark);
   }
 
-  void _editMedication(bool isAr, int? index) {
+  void _editMedication(bool isAr, int? index, bool isDark, Color gold) {
     final name = TextEditingController(text: index != null ? _medications[index]['name'] : '');
     final dur = TextEditingController(text: index != null ? _medications[index]['duration'] : '');
     
     _showAddDialog(index == null ? (isAr ? 'إضافة دواء' : 'Add Medication') : (isAr ? 'تعديل دواء' : 'Edit Medication'), [
-      _buildDialogField(name, isAr ? 'اسم الدواء' : 'Drug Name', maxLines: 2),
-      _buildDialogField(dur, isAr ? 'المدة / الجرعة' : 'Duration / Dose', maxLines: 2),
+      _buildDialogField(name, isAr ? 'اسم الدواء' : 'Drug Name', isDark, gold, maxLines: 2),
+      _buildDialogField(dur, isAr ? 'المدة / الجرعة' : 'Duration / Dose', isDark, gold, maxLines: 2),
     ], () {
       setState(() {
         final data = {'name': name.text, 'duration': dur.text};
         if (index == null) { _medications.add(data); } else { _medications[index] = data; }
       });
-    });
+    }, isDark);
   }
 
-  void _editDeworming(bool isAr, int? index) {
+  void _editDeworming(bool isAr, int? index, bool isDark, Color gold) {
     final name = TextEditingController(text: index != null ? _dewormingDoses[index]['name'] : '');
     final date = TextEditingController(text: index != null ? _dewormingDoses[index]['date'] : '');
     
     _showAddDialog(index == null ? (isAr ? 'إضافة جرعة ديدان' : 'Add Deworming Dose') : (isAr ? 'تعديل جرعة ديدان' : 'Edit Deworming Dose'), [
-      _buildDialogField(name, isAr ? 'اسم الجرعة' : 'Dose Name'),
-      _buildDateField(date, isAr ? 'تاريخ آخر جرعة' : 'Last Dose Date'),
+      _buildDialogField(name, isAr ? 'اسم الجرعة' : 'Dose Name', isDark, gold),
+      _buildDateField(date, isAr ? 'تاريخ آخر جرعة' : 'Last Dose Date', isDark, gold),
     ], () {
       setState(() {
         final data = {'name': name.text, 'date': date.text};
         if (index == null) { _dewormingDoses.add(data); } else { _dewormingDoses[index] = data; }
       });
-    });
+    }, isDark);
   }
 
   @override
   Widget build(BuildContext context) {
     bool isAr = MyApp.of(context).locale.languageCode == 'ar';
+    Color themeBg = Theme.of(context).scaffoldBackgroundColor;
+    bool isDark = themeBg.value == const Color(0xFF2D2D2D).value;
     Color primaryColor = Theme.of(context).primaryColor;
+    Color gold = const Color(0xFFC5A059);
+    Color textColor = isDark ? Colors.white : Colors.black87;
     
     return Scaffold(
+      backgroundColor: themeBg,
       appBar: AppBar(
-        title: Text(isAr ? 'تعديل بيانات الأليف' : 'Edit Pet Data'), 
+        title: Text(isAr ? 'تعديل بيانات الأليف' : 'Edit Pet Data', style: const TextStyle(color: Colors.white)), 
         backgroundColor: primaryColor, 
-        foregroundColor: Colors.white,
+        iconTheme: const IconThemeData(color: Colors.white),
         actions: [
           IconButton(
             icon: const Icon(Icons.picture_as_pdf),
@@ -211,25 +237,29 @@ class _EditPetViewState extends State<EditPetView> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildSectionTitle(isAr ? 'البيانات الأساسية' : 'Basic Info', Icons.info_outline, primaryColor),
-              _buildField(_nameController, isAr ? 'اسم الحيوان' : 'Pet Name', Icons.pets, primaryColor),
+              _buildSectionTitle(isAr ? 'البيانات الأساسية' : 'Basic Info', Icons.info_outline, isDark ? gold : primaryColor),
+              _buildField(_nameController, isAr ? 'اسم الحيوان' : 'Pet Name', Icons.pets, isDark, primaryColor, gold),
               const SizedBox(height: 12),
               
-              _buildField(_typeController, isAr ? 'نوع الحيوان (قط، كلب...)' : 'Animal Type', Icons.category, primaryColor),
+              _buildField(_typeController, isAr ? 'نوع الحيوان (قط، كلب...)' : 'Animal Type', Icons.category, isDark, primaryColor, gold),
               const SizedBox(height: 12),
 
               Row(children: [
                 Expanded(
                   child: DropdownButtonFormField<String>(
                     value: _gender,
+                    dropdownColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+                    style: TextStyle(color: textColor),
                     decoration: InputDecoration(
                       labelText: isAr ? 'الجنس' : 'Gender',
-                      prefixIcon: Icon(Icons.transgender, color: primaryColor),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      labelStyle: const TextStyle(color: Colors.grey),
+                      prefixIcon: Icon(Icons.transgender, color: isDark ? gold : primaryColor),
+                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: isDark ? Colors.white10 : Colors.grey.shade300)),
+                      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: isDark ? gold : primaryColor)),
                     ),
                     items: [
-                      DropdownMenuItem(value: 'male', child: Text(isAr ? 'ذكر' : 'Male')),
-                      DropdownMenuItem(value: 'female', child: Text(isAr ? 'أنثى' : 'Female')),
+                      DropdownMenuItem(value: 'male', child: Text(isAr ? 'ذكر' : 'Male', style: TextStyle(color: textColor))),
+                      DropdownMenuItem(value: 'female', child: Text(isAr ? 'أنثى' : 'Female', style: TextStyle(color: textColor))),
                     ],
                     onChanged: (val) => setState(() => _gender = val),
                   ),
@@ -238,14 +268,18 @@ class _EditPetViewState extends State<EditPetView> {
                 Expanded(
                   child: DropdownButtonFormField<String>(
                     value: _sterilizationStatus,
+                    dropdownColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+                    style: TextStyle(color: textColor),
                     decoration: InputDecoration(
                       labelText: isAr ? 'معقم / مخصي' : 'Neutered/Spayed',
-                      prefixIcon: Icon(Icons.content_cut, color: primaryColor),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      labelStyle: const TextStyle(color: Colors.grey),
+                      prefixIcon: Icon(Icons.content_cut, color: isDark ? gold : primaryColor),
+                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: isDark ? Colors.white10 : Colors.grey.shade300)),
+                      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: isDark ? gold : primaryColor)),
                     ),
                     items: [
-                      DropdownMenuItem(value: 'yes', child: Text(isAr ? 'نعم' : 'Yes')),
-                      DropdownMenuItem(value: 'no', child: Text(isAr ? 'لا' : 'No')),
+                      DropdownMenuItem(value: 'yes', child: Text(isAr ? 'نعم' : 'Yes', style: TextStyle(color: textColor))),
+                      DropdownMenuItem(value: 'no', child: Text(isAr ? 'لا' : 'No', style: TextStyle(color: textColor))),
                     ],
                     onChanged: (val) => setState(() => _sterilizationStatus = val),
                   ),
@@ -254,45 +288,50 @@ class _EditPetViewState extends State<EditPetView> {
               const SizedBox(height: 12),
 
               Row(children: [
-                Expanded(child: _buildField(_weightController, isAr ? 'الوزن (كجم)' : 'Weight (kg)', Icons.monitor_weight_outlined, primaryColor, keyboardType: TextInputType.number)),
+                Expanded(child: _buildField(_weightController, isAr ? 'الوزن (كجم)' : 'Weight (kg)', Icons.monitor_weight_outlined, isDark, primaryColor, gold, keyboardType: TextInputType.number)),
                 const SizedBox(width: 10),
-                Expanded(child: _buildField(_ageController, isAr ? 'العمر' : 'Age', Icons.calendar_today, primaryColor)),
+                Expanded(child: _buildField(_ageController, isAr ? 'العمر' : 'Age', Icons.calendar_today, isDark, primaryColor, gold)),
               ]),
               
               const SizedBox(height: 12),
-              _buildField(_ownerNameController, isAr ? 'اسم الصاحب' : 'Owner Name', Icons.person, primaryColor),
+              _buildField(_ownerNameController, isAr ? 'اسم الصاحب' : 'Owner Name', Icons.person, isDark, primaryColor, gold),
               const SizedBox(height: 12),
-              _buildField(_ownerPhoneController, isAr ? 'رقم الهاتف' : 'Phone Number', Icons.phone, primaryColor, keyboardType: TextInputType.phone),
+              _buildField(_ownerPhoneController, isAr ? 'رقم الهاتف' : 'Phone Number', Icons.phone, isDark, primaryColor, gold, keyboardType: TextInputType.phone),
 
               const Divider(height: 40),
-              _buildListSection(isAr ? 'التطعيمات' : 'Vaccinations', Icons.vaccines, primaryColor, _vaccinations, 
-                (item) => '${item['type']} - ${item['date']}', (index) => _editVaccination(isAr, index)),
+              _buildListSection(isAr ? 'التطعيمات' : 'Vaccinations', Icons.vaccines, isDark ? gold : primaryColor, _vaccinations, 
+                (item) => '${item['type']} - ${item['date']}', (index) => _editVaccination(isAr, index, isDark, gold), isDark),
 
               const Divider(height: 40),
               _buildListSection(isAr ? 'العمليات الجراحية' : 'Surgical Procedures', Icons.healing, Colors.red, _surgeries, 
-                (item) => '${item['name']} (${item['date']})', (index) => _editSurgery(isAr, index)),
+                (item) => '${item['name']} (${item['date']})', (index) => _editSurgery(isAr, index, isDark, gold), isDark),
 
               const Divider(height: 40),
               _buildListSection(isAr ? 'الأدوية الحالية' : 'Current Medications', Icons.medication, Colors.teal, _medications, 
-                (item) => '${item['name']} - ${item['duration']}', (index) => _editMedication(isAr, index)),
+                (item) => '${item['name']} - ${item['duration']}', (index) => _editMedication(isAr, index, isDark, gold), isDark),
 
               const Divider(height: 40),
               _buildListSection(isAr ? 'جرعات الديدان' : 'Deworming Doses', Icons.bug_report, Colors.brown, _dewormingDoses, 
-                (item) => '${item['name']} (${item['date']})', (index) => _editDeworming(isAr, index)),
+                (item) => '${item['name']} (${item['date']})', (index) => _editDeworming(isAr, index, isDark, gold), isDark),
 
               const Divider(height: 40),
-              _buildSimpleListSection(isAr ? 'سجل الحساسية' : 'Allergies', Icons.warning_amber, Colors.orange, _allergies, isAr),
+              _buildSimpleListSection(isAr ? 'سجل الحساسية' : 'Allergies', Icons.warning_amber, Colors.orange, _allergies, isAr, isDark),
 
               const Divider(height: 40),
-              _buildSimpleListSection(isAr ? 'الأمراض المزمنة' : 'Chronic Diseases', Icons.biotech, Colors.purple, _chronicDiseases, isAr),
+              _buildSimpleListSection(isAr ? 'الأمراض المزمنة' : 'Chronic Diseases', Icons.biotech, Colors.purple, _chronicDiseases, isAr, isDark),
 
               const SizedBox(height: 40),
               ElevatedButton(
                 onPressed: isUpdating ? null : () => _updatePet(isAr),
-                style: ElevatedButton.styleFrom(backgroundColor: primaryColor, minimumSize: const Size(double.infinity, 55), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))),
-                child: isUpdating ? const CircularProgressIndicator(color: Colors.white) : Text(isAr ? 'حفظ التعديلات' : 'Save Changes', style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: isDark ? gold : primaryColor, 
+                  foregroundColor: isDark ? Colors.black87 : Colors.white,
+                  minimumSize: const Size(double.infinity, 55), 
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))
+                ),
+                child: isUpdating ? const CircularProgressIndicator(color: Colors.white) : Text(isAr ? 'حفظ التعديلات' : 'Save Changes', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               ),
-              const SizedBox(height: 40),
+              const SizedBox(height: 80),
             ],
           ),
         ),
@@ -302,32 +341,42 @@ class _EditPetViewState extends State<EditPetView> {
 
   Widget _buildSectionTitle(String title, IconData icon, Color color) => Padding(padding: const EdgeInsets.only(bottom: 15), child: Row(children: [Icon(icon, color: color), const SizedBox(width: 10), Text(title, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: color))]));
 
-  Widget _buildField(TextEditingController controller, String label, IconData icon, Color color, {TextInputType? keyboardType}) {
+  Widget _buildField(TextEditingController controller, String label, IconData icon, bool isDark, Color primary, Color gold, {TextInputType? keyboardType}) {
     return TextFormField(
       controller: controller, 
       keyboardType: keyboardType, 
-      decoration: InputDecoration(labelText: label, prefixIcon: Icon(icon, color: color), border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
+      style: TextStyle(color: isDark ? Colors.white : Colors.black87),
+      decoration: InputDecoration(
+        labelText: label, 
+        labelStyle: const TextStyle(color: Colors.grey),
+        prefixIcon: Icon(icon, color: isDark ? gold : primary), 
+        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: isDark ? Colors.white10 : Colors.grey.shade300)),
+        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: isDark ? gold : primary)),
+      ),
       validator: (v) => v!.isEmpty ? (MyApp.of(context).locale.languageCode == 'ar' ? 'مطلوب' : 'Required') : null,
     );
   }
 
-  Widget _buildDateField(TextEditingController controller, String label) {
+  Widget _buildDateField(TextEditingController controller, String label, bool isDark, Color gold) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: TextField(
         controller: controller,
         readOnly: true,
-        onTap: () => _selectDate(context, controller),
+        style: TextStyle(color: isDark ? Colors.white : Colors.black87),
+        onTap: () => _selectDate(context, controller, isDark),
         decoration: InputDecoration(
           labelText: label, 
+          labelStyle: const TextStyle(color: Colors.grey),
           suffixIcon: const Icon(Icons.calendar_month),
-          border: const OutlineInputBorder()
+          enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: isDark ? Colors.white10 : Colors.grey.shade300)),
+          focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: isDark ? gold : Colors.teal)),
         ),
       ),
     );
   }
 
-  Widget _buildListSection(String title, IconData icon, Color color, List items, String Function(dynamic) labelBuilder, Function(int?) onEdit) {
+  Widget _buildListSection(String title, IconData icon, Color color, List items, String Function(dynamic) labelBuilder, Function(int?) onEdit, bool isDark) {
     return Column(children: [
       Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
         _buildSectionTitle(title, icon, color),
@@ -336,9 +385,10 @@ class _EditPetViewState extends State<EditPetView> {
       ...List.generate(items.length, (index) {
         final item = items[index];
         return Card(
+          color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
           margin: const EdgeInsets.only(bottom: 8),
           child: ListTile(
-            title: Text(labelBuilder(item), style: const TextStyle(fontSize: 14)),
+            title: Text(labelBuilder(item), style: TextStyle(fontSize: 14, color: isDark ? Colors.white : Colors.black87)),
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -352,22 +402,23 @@ class _EditPetViewState extends State<EditPetView> {
     ]);
   }
 
-  Widget _buildSimpleListSection(String title, IconData icon, Color color, List<String> items, bool isAr) {
+  Widget _buildSimpleListSection(String title, IconData icon, Color color, List<String> items, bool isAr, bool isDark) {
     return Column(children: [
       Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
         _buildSectionTitle(title, icon, color),
         IconButton(
           onPressed: () => _showSimpleEditDialog(isAr, title, null, (val) {
             setState(() => items.add(val));
-          }), 
+          }, isDark), 
           icon: Icon(Icons.add_circle, color: color)
         ),
       ]),
       ...List.generate(items.length, (index) {
         return Card(
+          color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
           margin: const EdgeInsets.only(bottom: 8),
           child: ListTile(
-            title: Text(items[index], style: const TextStyle(fontSize: 14)),
+            title: Text(items[index], style: TextStyle(fontSize: 14, color: isDark ? Colors.white : Colors.black87)),
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -375,7 +426,7 @@ class _EditPetViewState extends State<EditPetView> {
                   icon: const Icon(Icons.edit, color: Colors.blue, size: 20),
                   onPressed: () => _showSimpleEditDialog(isAr, title, index, (val) {
                     setState(() => items[index] = val);
-                  }),
+                  }, isDark),
                 ),
                 IconButton(
                   icon: const Icon(Icons.delete, color: Colors.red, size: 20),
@@ -389,21 +440,25 @@ class _EditPetViewState extends State<EditPetView> {
     ]);
   }
 
-  void _showSimpleEditDialog(bool isAr, String title, int? index, Function(String) onConfirm) {
+  void _showSimpleEditDialog(bool isAr, String title, int? index, Function(String) onConfirm, bool isDark) {
     String initialValue = index != null ? (title == (isAr ? 'سجل الحساسية' : 'Allergies') ? _allergies[index] : _chronicDiseases[index]) : '';
     final controller = TextEditingController(text: initialValue);
     showDialog(context: context, builder: (c) => AlertDialog(
-      title: Text(title),
+      backgroundColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+      title: Text(title, style: TextStyle(color: isDark ? Colors.white : Colors.black87)),
       content: TextField(
         controller: controller,
         maxLines: null,
+        style: TextStyle(color: isDark ? Colors.white : Colors.black87),
         decoration: InputDecoration(
           hintText: isAr ? 'اكتب هنا...' : 'Write here...',
-          border: const OutlineInputBorder()
+          hintStyle: const TextStyle(color: Colors.grey),
+          enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: isDark ? Colors.white10 : Colors.grey.shade300)),
+          focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: isDark ? const Color(0xFFC5A059) : Colors.teal)),
         ),
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(c), child: Text(isAr ? 'إلغاء' : 'Cancel')),
+        TextButton(onPressed: () => Navigator.pop(c), child: Text(isAr ? 'إلغاء' : 'Cancel', style: const TextStyle(color: Colors.grey))),
         ElevatedButton(
           onPressed: () {
             if (controller.text.isNotEmpty) {
@@ -411,30 +466,42 @@ class _EditPetViewState extends State<EditPetView> {
               Navigator.pop(c);
             }
           }, 
+          style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFC5A059), foregroundColor: Colors.black87),
           child: Text(isAr ? 'تأكيد' : 'Confirm')
         ),
       ],
     ));
   }
 
-  void _showAddDialog(String title, List<Widget> fields, VoidCallback onConfirm) {
+  void _showAddDialog(String title, List<Widget> fields, VoidCallback onConfirm, bool isDark) {
     bool isAr = MyApp.of(context).locale.languageCode == 'ar';
     showDialog(context: context, builder: (c) => AlertDialog(
-      title: Text(title),
-      content:     SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: fields)),
+      backgroundColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+      title: Text(title, style: TextStyle(color: isDark ? Colors.white : Colors.black87)),
+      content: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: fields)),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(c), child: Text(isAr ? 'إلغاء' : 'Cancel')),
-        ElevatedButton(onPressed: () { onConfirm(); Navigator.pop(c); }, child: Text(isAr ? 'تأكيد' : 'Confirm')),
+        TextButton(onPressed: () => Navigator.pop(c), child: Text(isAr ? 'إلغاء' : 'Cancel', style: const TextStyle(color: Colors.grey))),
+        ElevatedButton(
+          onPressed: () { onConfirm(); Navigator.pop(c); }, 
+          style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFC5A059), foregroundColor: Colors.black87),
+          child: Text(isAr ? 'تأكيد' : 'Confirm')
+        ),
       ],
     ));
   }
 
-  Widget _buildDialogField(TextEditingController controller, String label, {int maxLines = 1}) => Padding(
+  Widget _buildDialogField(TextEditingController controller, String label, bool isDark, Color gold, {int maxLines = 1}) => Padding(
     padding: const EdgeInsets.only(bottom: 10),
     child: TextField(
       controller: controller, 
       maxLines: maxLines,
-      decoration: InputDecoration(labelText: label, border: const OutlineInputBorder()),
+      style: TextStyle(color: isDark ? Colors.white : Colors.black87),
+      decoration: InputDecoration(
+        labelText: label, 
+        labelStyle: const TextStyle(color: Colors.grey),
+        enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: isDark ? Colors.white10 : Colors.grey.shade300)),
+        focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: isDark ? gold : Colors.teal)),
+      ),
     ),
   );
 
@@ -472,7 +539,7 @@ class _EditPetViewState extends State<EditPetView> {
           _pdfRow(isAr ? 'رقم الهاتف:' : 'Phone:', _ownerPhoneController.text, isAr, font, fontBold),
           
           if (_vaccinations.isNotEmpty) ...[
-            pw.Header(level: 1, child: pw.Text(isAr ? 'التطعIMات' : 'Vaccinations', textDirection: isAr ? pw.TextDirection.rtl : pw.TextDirection.ltr, style: pw.TextStyle(font: fontBold))),
+            pw.Header(level: 1, child: pw.Text(isAr ? 'التطعيمات' : 'Vaccinations', textDirection: isAr ? pw.TextDirection.rtl : pw.TextDirection.ltr, style: pw.TextStyle(font: fontBold))),
             ..._vaccinations.map((v) => pw.Text('- ${v['type']} (${v['date']}) ${v['next'] != '' ? ' | Next: ${v['next']}' : ''}', textDirection: isAr ? pw.TextDirection.rtl : pw.TextDirection.ltr, style: pw.TextStyle(font: font))),
           ],
           

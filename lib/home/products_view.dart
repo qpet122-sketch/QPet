@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:vet/home/add_product_view.dart';
+import 'package:vet/home/empty_state_widget.dart'; // إضافة الويدجت الجديد
 import 'package:vet/main.dart';
 
 // إدارة السلة
@@ -77,38 +78,53 @@ class _ProductsViewState extends State<ProductsView> {
   @override
   Widget build(BuildContext context) {
     bool isAr = MyApp.of(context).locale.languageCode == 'ar';
+    Color themeBg = Theme.of(context).scaffoldBackgroundColor;
+    bool isDark = themeBg.value == const Color(0xFF2D2D2D).value;
     Color primaryColor = Theme.of(context).primaryColor;
+    Color goldColor = const Color(0xFFC5A059);
+    Color textColor = isDark ? Colors.white : Colors.black87;
 
     return Scaffold(
+      backgroundColor: themeBg,
       appBar: AppBar(
-        title: Text(isAr ? 'متجر المستلزمات' : 'Pet Shop'),
+        title: Text(isAr ? 'متجر المستلزمات' : 'Pet Shop', style: const TextStyle(color: Colors.white)),
         backgroundColor: primaryColor,
-        foregroundColor: Colors.white,
+        iconTheme: const IconThemeData(color: Colors.white),
         centerTitle: true,
         actions: [
-          Stack(
-            children: [
-              IconButton(
-                onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (c) => const CartView())).then((_) => setState(() {})),
-                icon: const Icon(Icons.shopping_cart_outlined),
-              ),
-              if (cartItems.isNotEmpty)
-                Positioned(
-                  right: 8, top: 8,
-                  child: CircleAvatar(
-                    radius: 8, backgroundColor: Colors.red,
-                    child: Text('${cartItems.length}', style: const TextStyle(fontSize: 10, color: Colors.white)),
-                  ),
-                )
-            ],
-          )
+          if (userRole != 'doctor')
+            Stack(
+              children: [
+                IconButton(
+                  onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (c) => const CartView())).then((_) => setState(() {})),
+                  icon: const Icon(Icons.shopping_cart_outlined),
+                  iconSize: 30, // تكبير حجم الأيقونة
+                ),
+                if (cartItems.isNotEmpty)
+                  Positioned(
+                    right: 5, top: 5, // تعديل مكان الإشعار ليناسب الحجم الجديد
+                    child: CircleAvatar(
+                      radius: 9, backgroundColor: Colors.red,
+                      child: Text('${cartItems.length}', style: const TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.bold)),
+                    ),
+                  )
+              ],
+            )
         ],
       ),
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance.collection('products').orderBy('createdAt', descending: true).snapshots(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
-          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) return Center(child: Text(isAr ? 'لا توجد منتجات حالياً' : 'No products found'));
+          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+            return EmptyStateWidget(
+              icon: Icons.storefront_outlined,
+              title: isAr ? 'المتجر فارغ' : 'Store is Empty',
+              subtitle: isAr 
+                  ? 'لم يتم إضافة أي منتجات في المتجر حتى الآن' 
+                  : 'No products have been added to the store yet.',
+            );
+          }
 
           final products = snapshot.data!.docs.map((doc) => Product.fromFirestore(doc)).toList();
 
@@ -121,21 +137,22 @@ class _ProductsViewState extends State<ProductsView> {
               mainAxisSpacing: 16,
             ),
             itemCount: products.length,
-            itemBuilder: (context, index) => _buildProductCard(context, products[index], isAr, primaryColor),
+            itemBuilder: (context, index) => _buildProductCard(context, products[index], isAr, primaryColor, isDark, goldColor, textColor),
           );
         },
       ),
     );
   }
 
-  Widget _buildProductCard(BuildContext context, Product product, bool isAr, Color primaryColor) {
+  Widget _buildProductCard(BuildContext context, Product product, bool isAr, Color primaryColor, bool isDark, Color goldColor, Color textColor) {
     bool isInCart = cartItems.any((item) => item.product.id == product.id);
 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white, borderRadius: BorderRadius.circular(25),
-        boxShadow: [BoxShadow(color: primaryColor.withOpacity(0.05), blurRadius: 15, offset: const Offset(0, 8))],
-        border: Border.all(color: primaryColor.withOpacity(0.05)),
+        color: isDark ? const Color(0xFF1E1E1E) : Colors.white, 
+        borderRadius: BorderRadius.circular(25),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 15, offset: const Offset(0, 8))],
+        border: Border.all(color: isDark ? goldColor.withOpacity(0.2) : primaryColor.withOpacity(0.05)),
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(25),
@@ -145,20 +162,38 @@ class _ProductsViewState extends State<ProductsView> {
             Expanded(
               child: Stack(
                 children: [
-                  Positioned.fill(child: Image.network(product.imageUrl, fit: BoxFit.cover, errorBuilder: (c, e, s) => Center(child: Icon(Icons.broken_image, color: primaryColor)))),
+                  Positioned.fill(
+                    child: Image.network(
+                      product.imageUrl, 
+                      fit: BoxFit.cover, 
+                      loadingBuilder: (context, child, loadingProgress) {
+                        if (loadingProgress == null) return child;
+                        return Center(
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            value: loadingProgress.expectedTotalBytes != null
+                                ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
+                                : null,
+                            color: isDark ? goldColor.withOpacity(0.5) : primaryColor.withOpacity(0.5),
+                          ),
+                        );
+                      },
+                      errorBuilder: (c, e, s) => Center(child: Icon(Icons.broken_image, color: primaryColor))
+                    )
+                  ),
                   Positioned(
                     top: 10, left: 10,
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(color: primaryColor, borderRadius: BorderRadius.circular(10)),
-                      child: Text(product.category, style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                      decoration: BoxDecoration(color: isDark ? goldColor : primaryColor, borderRadius: BorderRadius.circular(10)),
+                      child: Text(product.category, style: TextStyle(color: isDark ? Colors.black87 : Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
                     ),
                   ),
                   if (userRole == 'doctor')
                     Positioned(
                       top: 5, right: 5,
                       child: PopupMenuButton<String>(
-                        icon: const CircleAvatar(backgroundColor: Colors.white, radius: 15, child: Icon(Icons.more_vert, color: Colors.black, size: 18)),
+                        icon: CircleAvatar(backgroundColor: isDark ? Colors.black54 : Colors.white, radius: 15, child: Icon(Icons.more_vert, color: isDark ? Colors.white : Colors.black, size: 18)),
                         onSelected: (val) {
                           if (val == 'edit') Navigator.push(context, MaterialPageRoute(builder: (c) => AddProductView(product: product)));
                           else if (val == 'delete') _confirmDelete(product.id, isAr);
@@ -177,9 +212,9 @@ class _ProductsViewState extends State<ProductsView> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(product.name, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                  Text(product.name, maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: textColor)),
                   const SizedBox(height: 5),
-                  Text('${product.price} ${isAr ? 'ج.م' : 'EGP'}', style: TextStyle(color: primaryColor, fontWeight: FontWeight.bold, fontSize: 16)),
+                  Text('${product.price} ${isAr ? 'ج.م' : 'EGP'}', style: TextStyle(color: isDark ? goldColor : primaryColor, fontWeight: FontWeight.bold, fontSize: 16)),
                   const SizedBox(height: 10),
                   if (userRole == 'owner')
                     ElevatedButton(
@@ -193,8 +228,8 @@ class _ProductsViewState extends State<ProductsView> {
                         });
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: isInCart ? Colors.grey : primaryColor, 
-                        foregroundColor: Colors.white, 
+                        backgroundColor: isInCart ? Colors.grey : (isDark ? goldColor : primaryColor), 
+                        foregroundColor: isDark ? Colors.black87 : Colors.white, 
                         minimumSize: const Size(double.infinity, 35), 
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))
                       ),
@@ -202,12 +237,12 @@ class _ProductsViewState extends State<ProductsView> {
                         isInCart 
                           ? (isAr ? 'تمت الإضافة' : 'Added')
                           : (isAr ? 'أضف للسلة' : 'Add to Cart'), 
-                        style: const TextStyle(fontSize: 12)
+                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)
                       ),
                     ),
                   TextButton(
                     onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (c) => ProductDetailView(product: product))).then((_) => setState(() {})),
-                    style: TextButton.styleFrom(minimumSize: const Size(double.infinity, 30)),
+                    style: TextButton.styleFrom(minimumSize: const Size(double.infinity, 30), foregroundColor: isDark ? goldColor.withOpacity(0.8) : primaryColor),
                     child: Text(isAr ? 'التفاصيل' : 'Details', style: const TextStyle(fontSize: 12)),
                   ),
                 ],
@@ -280,25 +315,50 @@ class _ProductDetailViewState extends State<ProductDetailView> {
   @override
   Widget build(BuildContext context) {
     bool isAr = MyApp.of(context).locale.languageCode == 'ar';
+    Color themeBg = Theme.of(context).scaffoldBackgroundColor;
+    bool isDark = themeBg.value == const Color(0xFF2D2D2D).value;
     Color primaryColor = Theme.of(context).primaryColor;
+    Color goldColor = const Color(0xFFC5A059);
+    Color textColor = isDark ? Colors.white : Colors.black87;
     bool isInCart = cartItems.any((item) => item.product.id == widget.product.id);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FB),
+      backgroundColor: themeBg,
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
             expandedHeight: 400, 
             pinned: true, 
             backgroundColor: primaryColor,
+            iconTheme: const IconThemeData(color: Colors.white),
             flexibleSpace: FlexibleSpaceBar(
-              background: Hero(tag: widget.product.id, child: Image.network(widget.product.imageUrl, fit: BoxFit.cover)),
+              background: Hero(
+                tag: widget.product.id, 
+                child: Image.network(
+                  widget.product.imageUrl, 
+                  fit: BoxFit.cover,
+                  loadingBuilder: (context, child, loadingProgress) {
+                    if (loadingProgress == null) return child;
+                    return Center(
+                      child: CircularProgressIndicator(
+                        value: loadingProgress.expectedTotalBytes != null
+                            ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
+                            : null,
+                        color: Colors.white.withOpacity(0.5),
+                      ),
+                    );
+                  },
+                )
+              ),
             ),
           ),
           SliverToBoxAdapter(
             child: Container(
               padding: const EdgeInsets.all(24),
-              decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(30))),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF1E1E1E) : Colors.white, 
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(30))
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -307,18 +367,18 @@ class _ProductDetailViewState extends State<ProductDetailView> {
                     children: [
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(color: primaryColor.withOpacity(0.1), borderRadius: BorderRadius.circular(20)),
-                        child: Text(widget.product.category, style: TextStyle(color: primaryColor, fontWeight: FontWeight.bold)),
+                        decoration: BoxDecoration(color: (isDark ? goldColor : primaryColor).withOpacity(0.1), borderRadius: BorderRadius.circular(20)),
+                        child: Text(widget.product.category, style: TextStyle(color: isDark ? goldColor : primaryColor, fontWeight: FontWeight.bold)),
                       ),
-                      Text('${widget.product.price} ${isAr ? 'ج.م' : 'EGP'}', style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: primaryColor)),
+                      Text('${widget.product.price} ${isAr ? 'ج.م' : 'EGP'}', style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: isDark ? goldColor : primaryColor)),
                     ],
                   ),
                   const SizedBox(height: 20),
-                  Text(widget.product.name, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.black87)),
+                  Text(widget.product.name, style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: textColor)),
                   const SizedBox(height: 15),
                   
                   if (widget.product.colors.isNotEmpty) ...[
-                    Text(isAr ? 'الألوان المتاحة' : 'Available Colors', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    Text(isAr ? 'الألوان المتاحة' : 'Available Colors', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: textColor)),
                     const SizedBox(height: 12),
                     SizedBox(
                       height: 55,
@@ -337,9 +397,9 @@ class _ProductDetailViewState extends State<ProductDetailView> {
                               margin: const EdgeInsets.only(right: 12),
                               padding: const EdgeInsets.symmetric(horizontal: 12),
                               decoration: BoxDecoration(
-                                color: isSelected ? primaryColor.withOpacity(0.1) : Colors.white,
+                                color: isSelected ? (isDark ? goldColor.withOpacity(0.1) : primaryColor.withOpacity(0.1)) : (isDark ? Colors.white.withOpacity(0.05) : Colors.white),
                                 borderRadius: BorderRadius.circular(15),
-                                border: Border.all(color: isSelected ? primaryColor : Colors.grey.shade300, width: 2),
+                                border: Border.all(color: isSelected ? (isDark ? goldColor : primaryColor) : (isDark ? Colors.white10 : Colors.grey.shade300), width: 2),
                               ),
                               child: Row(
                                 children: [
@@ -347,11 +407,11 @@ class _ProductDetailViewState extends State<ProductDetailView> {
                                     width: 18, height: 18,
                                     decoration: BoxDecoration(
                                       color: displayColor, shape: BoxShape.circle,
-                                      border: Border.all(color: Colors.grey.shade400, width: 0.5)
+                                      border: Border.all(color: isDark ? Colors.white24 : Colors.grey.shade400, width: 0.5)
                                     ),
                                   ),
                                   const SizedBox(width: 8),
-                                  Text(colorName, style: TextStyle(color: Colors.black87, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal)),
+                                  Text(colorName, style: TextStyle(color: isSelected ? (isDark ? goldColor : primaryColor) : textColor, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal)),
                                 ],
                               ),
                             ),
@@ -362,10 +422,10 @@ class _ProductDetailViewState extends State<ProductDetailView> {
                     const SizedBox(height: 25),
                   ],
 
-                  Text(isAr ? 'وصف المنتج' : 'Product Description', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  Text(isAr ? 'وصف المنتج' : 'Product Description', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: textColor)),
                   const SizedBox(height: 10),
-                  Text(widget.product.description, style: TextStyle(fontSize: 16, color: Colors.grey.shade600, height: 1.6)),
-                  const SizedBox(height: 120),
+                  Text(widget.product.description, style: TextStyle(fontSize: 16, color: isDark ? Colors.white70 : Colors.grey.shade600, height: 1.6)),
+                  const SizedBox(height: 140),
                 ],
               ),
             ),
@@ -375,7 +435,10 @@ class _ProductDetailViewState extends State<ProductDetailView> {
       bottomSheet: _userRole == 'owner' 
         ? Container(
             padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(color: Colors.white, boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, -5))]),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF1E1E1E) : Colors.white, 
+              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, -5))]
+            ),
             child: SizedBox(
               width: double.infinity, height: 55,
               child: ElevatedButton.icon(
@@ -390,7 +453,11 @@ class _ProductDetailViewState extends State<ProductDetailView> {
                 },
                 icon: Icon(isInCart ? Icons.remove_shopping_cart : Icons.add_shopping_cart),
                 label: Text(isInCart ? (isAr ? 'حذف من السلة' : 'Remove from Cart') : (isAr ? 'أضف للسلة' : 'Add to Cart'), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                style: ElevatedButton.styleFrom(backgroundColor: isInCart ? Colors.grey : primaryColor, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: isInCart ? Colors.grey : (isDark ? goldColor : primaryColor), 
+                  foregroundColor: isDark ? Colors.black87 : Colors.white, 
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))
+                ),
               ),
             ),
           )
@@ -410,12 +477,27 @@ class _CartViewState extends State<CartView> {
   @override
   Widget build(BuildContext context) {
     bool isAr = MyApp.of(context).locale.languageCode == 'ar';
+    Color themeBg = Theme.of(context).scaffoldBackgroundColor;
+    bool isDark = themeBg.value == const Color(0xFF2D2D2D).value;
     double totalProducts = cartItems.fold(0.0, (sum, item) => sum + (item.product.price * item.quantity));
+    Color textColor = isDark ? Colors.white : Colors.black87;
 
     return Scaffold(
-      appBar: AppBar(title: Text(isAr ? 'سلة المشتريات' : 'My Cart'), centerTitle: true),
+      backgroundColor: themeBg,
+      appBar: AppBar(
+        title: Text(isAr ? 'سلة المشتريات' : 'My Cart', style: const TextStyle(color: Colors.white)), 
+        backgroundColor: Theme.of(context).primaryColor,
+        iconTheme: const IconThemeData(color: Colors.white),
+        centerTitle: true
+      ),
       body: cartItems.isEmpty 
-          ? const Center(child: Icon(Icons.shopping_cart_outlined, size: 80, color: Colors.grey))
+          ? EmptyStateWidget(
+              icon: Icons.shopping_basket_outlined,
+              title: isAr ? 'سلتك فارغة' : 'Empty Cart',
+              subtitle: isAr 
+                  ? 'لم تقم بإضافة أي منتجات للسلة بعد، تسوق الآن!' 
+                  : 'You haven\'t added any products to your cart yet, shop now!',
+            )
           : Column(
               children: [
                 Expanded(
@@ -423,8 +505,12 @@ class _CartViewState extends State<CartView> {
                     padding: const EdgeInsets.all(16),
                     itemCount: cartItems.length,
                     itemBuilder: (c, i) => Card(
+                      color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
                       margin: const EdgeInsets.only(bottom: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(15),
+                        side: isDark ? BorderSide(color: Colors.white.withOpacity(0.05)) : BorderSide.none,
+                      ),
                       child: Padding(
                         padding: const EdgeInsets.all(12),
                         child: Row(
@@ -435,18 +521,18 @@ class _CartViewState extends State<CartView> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(cartItems[i].product.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                                  Text(cartItems[i].product.name, style: TextStyle(fontWeight: FontWeight.bold, color: textColor)),
                                   if (cartItems[i].selectedColor != null) Text('${isAr ? 'اللون:' : 'Color:'} ${cartItems[i].selectedColor}', style: const TextStyle(fontSize: 12, color: Colors.grey)),
-                                  Text('${cartItems[i].product.price} ج.م', style: TextStyle(color: Theme.of(context).primaryColor)),
+                                  Text('${cartItems[i].product.price} ج.م', style: TextStyle(color: isDark ? const Color(0xFFC5A059) : Theme.of(context).primaryColor)),
                                 ],
                               ),
                             ),
                             Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                IconButton(icon: const Icon(Icons.remove_circle_outline), onPressed: () => setState(() => cartItems[i].quantity > 1 ? cartItems[i].quantity-- : cartItems.removeAt(i))),
-                                Text('${cartItems[i].quantity}', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                                IconButton(icon: const Icon(Icons.add_circle_outline), onPressed: () => setState(() => cartItems[i].quantity++)),
+                                IconButton(icon: Icon(Icons.remove_circle_outline, color: isDark ? Colors.white38 : Colors.black54), onPressed: () => setState(() => cartItems[i].quantity > 1 ? cartItems[i].quantity-- : cartItems.removeAt(i))),
+                                Text('${cartItems[i].quantity}', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: textColor)),
+                                IconButton(icon: Icon(Icons.add_circle_outline, color: isDark ? Colors.white38 : Colors.black54), onPressed: () => setState(() => cartItems[i].quantity++)),
                               ],
                             ),
                           ],
@@ -457,20 +543,27 @@ class _CartViewState extends State<CartView> {
                 ),
                 Container(
                   padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(color: Colors.white, boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 10)]),
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF1E1E1E) : Colors.white, 
+                    boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 10)]
+                  ),
                   child: Column(
                     children: [
                       Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                        Text(isAr ? 'المجموع:' : 'Total:', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                        Text('$totalProducts ${isAr ? 'ج.م' : 'EGP'}', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Theme.of(context).primaryColor)),
+                        Text(isAr ? 'المجموع:' : 'Total:', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: textColor)),
+                        Text('$totalProducts ${isAr ? 'ج.م' : 'EGP'}', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: isDark ? const Color(0xFFC5A059) : Theme.of(context).primaryColor)),
                       ]),
                       const SizedBox(height: 20),
                       SizedBox(
                         width: double.infinity, height: 55,
                         child: ElevatedButton(
                           onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (c) => const CheckoutView())),
-                          style: ElevatedButton.styleFrom(backgroundColor: Theme.of(context).primaryColor, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))),
-                          child: Text(isAr ? 'الذهاب للدفع' : 'Proceed to Checkout'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: isDark ? const Color(0xFFC5A059) : Theme.of(context).primaryColor, 
+                            foregroundColor: isDark ? Colors.black87 : Colors.white,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))
+                          ),
+                          child: Text(isAr ? 'الذهاب للدفع' : 'Proceed to Checkout', style: const TextStyle(fontWeight: FontWeight.bold)),
                         ),
                       )
                     ],
@@ -509,34 +602,46 @@ class _CheckoutViewState extends State<CheckoutView> {
   @override
   Widget build(BuildContext context) {
     bool isAr = MyApp.of(context).locale.languageCode == 'ar';
+    Color themeBg = Theme.of(context).scaffoldBackgroundColor;
+    bool isDark = themeBg.value == const Color(0xFF2D2D2D).value;
     double totalProducts = cartItems.fold(0.0, (sum, item) => sum + (item.product.price * item.quantity));
     double shipping = double.tryParse(_shippingController.text) ?? 0;
     double finalTotal = totalProducts + shipping;
+    Color textColor = isDark ? Colors.white : Colors.black87;
 
     return Scaffold(
-      appBar: AppBar(title: Text(isAr ? 'إتمام الطلب' : 'Checkout'), centerTitle: true),
+      backgroundColor: themeBg,
+      appBar: AppBar(
+        title: Text(isAr ? 'إتمام الطلب' : 'Checkout', style: const TextStyle(color: Colors.white)), 
+        backgroundColor: Theme.of(context).primaryColor,
+        iconTheme: const IconThemeData(color: Colors.white),
+        centerTitle: true
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Column(
           children: [
-            _buildField(_nameController, isAr ? 'الاسم بالكامل' : 'Full Name', Icons.person),
+            _buildField(_nameController, isAr ? 'الاسم بالكامل' : 'Full Name', Icons.person, isDark),
             const SizedBox(height: 15),
-            _buildField(_phoneController, isAr ? 'رقم الهاتف' : 'Phone Number', Icons.phone, keyboardType: TextInputType.phone),
+            _buildField(_phoneController, isAr ? 'رقم الهاتف' : 'Phone Number', Icons.phone, isDark, keyboardType: TextInputType.phone),
             const SizedBox(height: 15),
-            _buildField(_addressController, isAr ? 'العنوان بالتفصيل' : 'Detailed Address', Icons.location_on, maxLines: 3),
+            _buildField(_addressController, isAr ? 'العنوان بالتفصيل' : 'Detailed Address', Icons.location_on, isDark, maxLines: 3),
             const SizedBox(height: 15),
-            _buildField(_shippingController, isAr ? 'سعر الشحن' : 'Shipping Cost', Icons.local_shipping, readOnly: true),
+            _buildField(_shippingController, isAr ? 'سعر الشحن' : 'Shipping Cost', Icons.local_shipping, isDark, readOnly: true),
             
             const SizedBox(height: 30),
             Container(
               padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(15)),
+              decoration: BoxDecoration(
+                color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey.shade100, 
+                borderRadius: BorderRadius.circular(15)
+              ),
               child: Column(
                 children: [
-                  _summaryRow(isAr ? 'إجمالي المنتجات:' : 'Products Total:', '$totalProducts ${isAr ? 'ج.م' : 'EGP'}'),
-                  _summaryRow(isAr ? 'سعر الشحن:' : 'Shipping:', '$shipping ${isAr ? 'ج.m' : 'EGP'}'),
+                  _summaryRow(isAr ? 'إجمالي المنتجات:' : 'Products Total:', '$totalProducts ${isAr ? 'ج.م' : 'EGP'}', isDark, textColor),
+                  _summaryRow(isAr ? 'سعر الشحن:' : 'Shipping:', '$shipping ${isAr ? 'ج.m' : 'EGP'}', isDark, textColor),
                   const Divider(height: 30),
-                  _summaryRow(isAr ? 'الإجمالي النهائي:' : 'Total Amount:', '$finalTotal ${isAr ? 'ج.م' : 'EGP'}', isBold: true),
+                  _summaryRow(isAr ? 'الإجمالي النهائي:' : 'Total Amount:', '$finalTotal ${isAr ? 'ج.م' : 'EGP'}', isDark, textColor, isBold: true),
                 ],
               ),
             ),
@@ -547,8 +652,12 @@ class _CheckoutViewState extends State<CheckoutView> {
               width: double.infinity, height: 55,
               child: ElevatedButton(
                 onPressed: _submitOrder,
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))),
-                child: Text(isAr ? 'تأكيد الطلب' : 'Confirm Order'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green, 
+                  foregroundColor: Colors.white, 
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))
+                ),
+                child: Text(isAr ? 'تأكيد الطلب' : 'Confirm Order', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
               ),
             )
           ],
@@ -557,25 +666,34 @@ class _CheckoutViewState extends State<CheckoutView> {
     );
   }
 
-  Widget _buildField(TextEditingController controller, String label, IconData icon, {TextInputType? keyboardType, int maxLines = 1, Function(String)? onChanged, bool readOnly = false}) {
+  Widget _buildField(TextEditingController controller, String label, IconData icon, bool isDark, {TextInputType? keyboardType, int maxLines = 1, Function(String)? onChanged, bool readOnly = false}) {
     return TextField(
       controller: controller,
       keyboardType: keyboardType,
       maxLines: maxLines,
       onChanged: onChanged,
       readOnly: readOnly,
-      decoration: InputDecoration(labelText: label, prefixIcon: Icon(icon), border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)), filled: true, fillColor: readOnly ? Colors.grey.shade100 : Colors.white),
+      style: TextStyle(color: isDark ? Colors.white : Colors.black87),
+      decoration: InputDecoration(
+        labelText: label, 
+        labelStyle: const TextStyle(color: Colors.grey),
+        prefixIcon: Icon(icon, color: isDark ? const Color(0xFFC5A059) : Theme.of(context).primaryColor), 
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)), 
+        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: isDark ? Colors.white10 : Colors.grey.shade300)),
+        filled: true, 
+        fillColor: readOnly ? (isDark ? Colors.black26 : Colors.grey.shade100) : (isDark ? Colors.white.withOpacity(0.02) : Colors.white)
+      ),
     );
   }
 
-  Widget _summaryRow(String label, String value, {bool isBold = false}) {
+  Widget _summaryRow(String label, String value, bool isDark, Color textColor, {bool isBold = false}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: TextStyle(fontSize: isBold ? 18 : 14, fontWeight: isBold ? FontWeight.bold : FontWeight.normal)),
-          Text(value, style: TextStyle(fontSize: isBold ? 18 : 14, fontWeight: isBold ? FontWeight.bold : FontWeight.normal, color: isBold ? Theme.of(context).primaryColor : Colors.black)),
+          Text(label, style: TextStyle(fontSize: isBold ? 18 : 14, fontWeight: isBold ? FontWeight.bold : FontWeight.normal, color: isBold ? textColor : Colors.grey)),
+          Text(value, style: TextStyle(fontSize: isBold ? 18 : 14, fontWeight: isBold ? FontWeight.bold : FontWeight.normal, color: isBold ? (isDark ? const Color(0xFFC5A059) : Theme.of(context).primaryColor) : textColor)),
         ],
       ),
     );

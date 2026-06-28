@@ -9,6 +9,8 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
+import 'home/no_internet_view.dart';
 
 import 'home/splash_screen.dart';
 
@@ -40,7 +42,7 @@ void main() async {
   );
 
   String language = _prefs?.getString('language') ?? 'ar';
-  int colorValue = _prefs?.getInt('themeColor') ?? Colors.teal.value;
+  int colorValue = _prefs?.getInt('themeColor') ?? const Color(0xFFFDF9F5).value;
 
   String? initialPetId;
   if (kIsWeb) {
@@ -92,6 +94,8 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
+    bool isDark = themeColor.value == const Color(0xFF2D2D2D).value;
+
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'QPet',
@@ -103,51 +107,26 @@ class _MyAppState extends State<MyApp> {
       ],
       supportedLocales: const [Locale('ar', ''), Locale('en', '')],
       theme: ThemeData(
-        primaryColor: themeColor,
-        colorScheme: ColorScheme.fromSeed(seedColor: themeColor, primary: themeColor),
+        primaryColor: const Color(0xFF004040),
+        scaffoldBackgroundColor: themeColor,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF004040),
+          primary: const Color(0xFF004040),
+          secondary: const Color(0xFFC5A059),
+          surface: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+        ),
         useMaterial3: true,
-      ),
-      home: kIsWeb 
-          ? (widget.startPetId != null 
-              ? PublicPetProfilePage(petId: widget.startPetId!) 
-              : const WebForbiddenPage())
-          : const SplashScreen(),
-      onGenerateRoute: kIsWeb ? (settings) => MaterialPageRoute(
-        builder: (_) => widget.startPetId != null 
-            ? PublicPetProfilePage(petId: widget.startPetId!) 
-            : const WebForbiddenPage()
-      ) : null,
-    );
-  }
-}
-
-class WebForbiddenPage extends StatelessWidget {
-  const WebForbiddenPage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const Scaffold(
-      backgroundColor: Colors.white,
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.qr_code_scanner, size: 80, color: Colors.grey),
-            const SizedBox(height: 20),
-            Text(
-              "يرجى مسح رمز الـ QR الخاص بالأليف للوصول للبيانات",
-              style: TextStyle(color: Colors.grey, fontSize: 16),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 10),
-            Text(
-              "Please scan the pet's QR code to access data",
-              style: TextStyle(color: Colors.grey, fontSize: 14),
-              textAlign: TextAlign.center,
-            ),
-          ],
+        textTheme: TextTheme(
+          bodyLarge: TextStyle(color: isDark ? Colors.white : Colors.black87),
+          bodyMedium: TextStyle(color: isDark ? Colors.white70 : Colors.black54),
         ),
       ),
+      builder: (context, child) {
+        return ConnectivityWrapper(child: child!);
+      },
+      home: widget.startPetId != null 
+          ? PublicPetProfilePage(petId: widget.startPetId!) 
+          : const SplashScreen(),
     );
   }
 }
@@ -166,16 +145,37 @@ class PublicPetProfilePage extends StatelessWidget {
         builder: (context, snapshot) {
           if (snapshot.hasError) return Center(child: Text(isAr ? 'خطأ في التحميل' : 'Error Loading'));
           if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
-          if (!snapshot.hasData || !snapshot.data!.exists) return Center(child: Text(isAr ? 'الأليف غير موجود (ID: $petId)' : 'Pet Not Found (ID: $petId)'));
+          if (!snapshot.hasData || !snapshot.data!.exists) return Center(child: Text(isAr ? 'الأليف غير موجود' : 'Pet Not Found'));
 
           final data = snapshot.data!.data() as Map<String, dynamic>;
           final color = Theme.of(context).primaryColor;
           final String? ownerUid = data['ownerUid'];
 
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: Center(
-              child: Container(
+          return Scaffold(
+            appBar: AppBar(
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              actions: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 8),
+                  child: ElevatedButton.icon(
+                    onPressed: () => Navigator.pushReplacement(context, MaterialPageRoute(builder: (c) => const SplashScreen())),
+                    icon: const Icon(Icons.login, size: 18),
+                    label: Text(isAr ? 'فتح التطبيق' : 'Open App'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: color, 
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: const Color(0xFFF8F9FB),
+            body: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+              child: Center(
+                child: Container(
                 constraints: const BoxConstraints(maxWidth: 600),
                 decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(30), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 20)]),
                 child: Column(
@@ -199,7 +199,6 @@ class PublicPetProfilePage extends StatelessWidget {
                           const Divider(height: 40),
                           _info(isAr ? 'المالك' : 'Owner', data['ownerName'], Icons.person, color),
                           
-                          // --- قسم السوشيال ميديا تحت اسم المالك مباشرة ---
                           if (ownerUid != null)
                             StreamBuilder<DocumentSnapshot>(
                               stream: FirebaseFirestore.instance.collection('users').doc(ownerUid).snapshots(),
@@ -218,11 +217,11 @@ class PublicPetProfilePage extends StatelessWidget {
                                   child: Row(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
-                                      if (hasFacebook) _socialIcon('facebook', userData['facebook'], Colors.blue),
-                                      if (hasFacebook && (hasTelegram || hasWhatsapp)) const SizedBox(width: 20),
-                                      if (hasTelegram) _socialIcon('telegram', userData['telegram'], Colors.lightBlue),
-                                      if (hasTelegram && hasWhatsapp) const SizedBox(width: 20),
-                                      if (hasWhatsapp) _socialIcon('whatsapp', userData['whatsapp'], Colors.green),
+                                      if (hasFacebook) _socialIcon(Icons.facebook, userData['facebook'], Colors.blue),
+                                      if (hasFacebook && (hasTelegram || hasWhatsapp)) const SizedBox(width: 15),
+                                      if (hasTelegram) _socialIcon(Icons.telegram, userData['telegram'], Colors.lightBlue),
+                                      if (hasTelegram && hasWhatsapp) const SizedBox(width: 15),
+                                      if (hasWhatsapp) _socialIcon(null, 'https://wa.me/${userData['whatsapp']}', Colors.green, isWhatsApp: true),
                                     ],
                                   ),
                                 );
@@ -230,10 +229,10 @@ class PublicPetProfilePage extends StatelessWidget {
                             ),
 
                           _info(isAr ? 'رقم التواصل' : 'Contact', data['ownerPhone'], Icons.phone, color),
-                          const SizedBox(height: 15),
+                          const SizedBox(height: 20),
                           if (data['ownerPhone'] != null && data['ownerPhone'].toString().isNotEmpty) 
                             ElevatedButton.icon(
-                              onPressed: () => _launchAnyUrl('tel:${data['ownerPhone']}'),
+                              onPressed: () => _launchUrl('tel:${data['ownerPhone']}'),
                               icon: const Icon(Icons.call),
                               label: Text(isAr ? 'اتصل بالمالك الآن' : 'Call Owner Now'),
                               style: ElevatedButton.styleFrom(
@@ -256,16 +255,6 @@ class PublicPetProfilePage extends StatelessWidget {
                             const SizedBox(height: 10),
                             ...(data['deworming_list'] as List).reversed.take(2).map((e) => _medInfo(e['name'] ?? '', e['date'] ?? '')),
                           ],
-
-                          if (data['chronic_diseases_list'] != null && (data['chronic_diseases_list'] as List).isNotEmpty) ...[
-                            const SizedBox(height: 20),
-                            Align(alignment: isAr ? Alignment.centerRight : Alignment.centerLeft, child: Text(isAr ? 'تنبيهات صحية:' : 'Health Alerts:', style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold))),
-                            const SizedBox(height: 10),
-                            ...(data['chronic_diseases_list'] as List).map((e) => Padding(
-                              padding: const EdgeInsets.only(bottom: 4),
-                              child: Row(children: [const Icon(Icons.warning, color: Colors.red, size: 16), const SizedBox(width: 8), Text(e.toString(), style: const TextStyle(color: Colors.red))]),
-                            )),
-                          ],
                           
                           const SizedBox(height: 40),
                           const Text('QPet Team - Smart ID System', style: TextStyle(color: Colors.grey, fontSize: 12)),
@@ -276,15 +265,15 @@ class PublicPetProfilePage extends StatelessWidget {
                 ),
               ),
             ),
-          );
+          ));
         },
       ),
     );
   }
 
-  void _launchAnyUrl(String url) async {
+  void _launchUrl(String url) async {
     final uri = Uri.parse(url);
-    await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (await canLaunchUrl(uri)) await launchUrl(uri);
   }
 
   Widget _info(String l, String? v, IconData i, Color c) => Padding(
@@ -297,38 +286,63 @@ class PublicPetProfilePage extends StatelessWidget {
     child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text(l, style: const TextStyle(color: Colors.grey)), Text(v ?? '--', style: const TextStyle(fontWeight: FontWeight.bold))])
   );
 
-  Widget _socialIcon(String platform, String value, Color color) {
-    IconData? icon;
-    String fullUrl;
-    String val = value.trim();
-    Color iconColor = color;
-    bool isWhatsApp = platform == 'whatsapp';
+  Widget _socialIcon(IconData? icon, String url, Color color, {bool isWhatsApp = false}) => InkWell(
+    onTap: () => _launchUrl(url),
+    child: CircleAvatar(
+      radius: 22, 
+      backgroundColor: color.withOpacity(0.1), 
+      child: isWhatsApp 
+        ? SvgPicture.asset('assets/WhatsApp.svg', width: 24, height: 24)
+        : Icon(icon, color: color, size: 24)
+    ),
+  );
+}
 
-    if (platform == 'facebook') {
-      icon = Icons.facebook;
-      fullUrl = val.startsWith('http') ? val : 'https://www.facebook.com/$val';
-    } else if (platform == 'telegram') {
-      icon = Icons.telegram;
-      if (val.startsWith('@')) val = val.substring(1);
-      fullUrl = val.startsWith('http') ? val : 'https://t.me/$val';
-    } else {
-      iconColor = Colors.green; // لون واتساب الأخضر
-      String phone = val.replaceAll(RegExp(r'[^0-9]'), '');
-      fullUrl = 'https://wa.me/$phone';
+class ConnectivityWrapper extends StatefulWidget {
+  final Widget child;
+  const ConnectivityWrapper({super.key, required this.child});
+
+  @override
+  State<ConnectivityWrapper> createState() => _ConnectivityWrapperState();
+}
+
+class _ConnectivityWrapperState extends State<ConnectivityWrapper> {
+  bool _isOffline = false;
+  late StreamSubscription<List<ConnectivityResult>> _subscription;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkInitialConnectivity();
+    _subscription = Connectivity().onConnectivityChanged.listen((List<ConnectivityResult> results) {
+      _updateStatus(results);
+    });
+  }
+
+  Future<void> _checkInitialConnectivity() async {
+    final List<ConnectivityResult> results = await Connectivity().checkConnectivity();
+    _updateStatus(results);
+  }
+
+  void _updateStatus(List<ConnectivityResult> results) {
+    // إذا لم يوجد أي نوع من أنواع الاتصال في القائمة، نعتبر الجهاز أوفلاين
+    final bool offline = results.every((result) => result == ConnectivityResult.none);
+    if (_isOffline != offline) {
+      setState(() => _isOffline = offline);
     }
+  }
 
-    return Material(
-      color: Colors.transparent,
-      child: IconButton(
-        onPressed: () => _launchAnyUrl(fullUrl),
-        icon: CircleAvatar(
-          radius: 22, 
-          backgroundColor: iconColor.withOpacity(0.1), 
-          child: isWhatsApp 
-            ? SvgPicture.asset('assets/WhatsApp.svg', width: 26, height: 26)
-            : Icon(icon, color: iconColor, size: 26)
-        ),
-      ),
-    );
+  @override
+  void dispose() {
+    _subscription.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isOffline) {
+      return NoInternetView(onRetry: _checkInitialConnectivity);
+    }
+    return widget.child;
   }
 }

@@ -26,29 +26,17 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     );
     _animation = CurvedAnimation(parent: _controller, curve: Curves.easeIn);
     _controller.forward();
-
     _navigateToNext();
   }
 
   _navigateToNext() async {
     await Future.delayed(const Duration(seconds: 3));
     if (!mounted) return;
-
     final prefs = await SharedPreferences.getInstance();
     bool onboardingDone = prefs.getBool('onboarding_done') ?? false;
-
-    Widget nextScreen;
     User? user = FirebaseAuth.instance.currentUser;
-
-    if (!onboardingDone) {
-      nextScreen = const OnboardingView();
-    } else {
-      nextScreen = user != null ? const HomeScreen() : const LoginView();
-    }
-
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => nextScreen),
-    );
+    Widget nextScreen = !onboardingDone ? const OnboardingView() : (user != null ? const HomeScreen() : const LoginView());
+    Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => nextScreen));
   }
 
   @override
@@ -60,7 +48,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white, // يمكنك تغييرها للون الثيم المفضل
+      backgroundColor: Color(0xffFAF3ED),
       body: Center(
         child: FadeTransition(
           opacity: _animation,
@@ -68,14 +56,14 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Image.asset(
-                'assets/logo.png',
-                width: 200,
-                height: 200,
+                'assets/final_logo.jpeg',
+                width: 250,
+                fit: BoxFit.contain,
               ),
-              const SizedBox(height: 24),
-              const CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFE67E22)), // لون برتقالي مثل اللوجو
-              ),
+              const SizedBox(height: 50),
+              // const CircularProgressIndicator(
+              //   valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF004040)),
+              // ),
             ],
           ),
         ),

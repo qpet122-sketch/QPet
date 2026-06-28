@@ -48,7 +48,10 @@ class _OrdersListViewState extends State<OrdersListView> {
   @override
   Widget build(BuildContext context) {
     bool isAr = MyApp.of(context).locale.languageCode == 'ar';
+    Color themeBg = Theme.of(context).scaffoldBackgroundColor;
+    bool isDark = themeBg.value == const Color(0xFF2D2D2D).value;
     Color primaryColor = Theme.of(context).primaryColor;
+    Color textColor = isDark ? Colors.white : Colors.black87;
 
     if (userRole == null) return const Scaffold(body: Center(child: CircularProgressIndicator()));
 
@@ -56,18 +59,20 @@ class _OrdersListViewState extends State<OrdersListView> {
     if (userRole == 'owner') query = query.where('userId', isEqualTo: currentUser!.uid);
     
     return Scaffold(
+      backgroundColor: themeBg,
       appBar: AppBar(
-        title: Text(userRole == 'doctor' ? (isAr ? 'إدارة الطلبات' : 'Order Management') : (isAr ? 'طلباتي' : 'My Orders')),
-        backgroundColor: primaryColor, foregroundColor: Colors.white,
+        title: Text(userRole == 'doctor' ? (isAr ? 'إدارة الطلبات' : 'Order Management') : (isAr ? 'طلباتي' : 'My Orders'), style: const TextStyle(color: Colors.white)),
+        backgroundColor: primaryColor, 
+        iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: StreamBuilder<QuerySnapshot>(
         stream: query.snapshots(),
         builder: (context, snapshot) {
-          if (snapshot.hasError) return Center(child: Text(isAr ? 'خطأ في جلب البيانات' : 'Error fetching data'));
+          if (snapshot.hasError) return Center(child: Text(isAr ? 'خطأ في جلب البيانات' : 'Error fetching data', style: TextStyle(color: textColor)));
           if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
           
           var docs = snapshot.data!.docs;
-          if (docs.isEmpty) return Center(child: Text(isAr ? 'لا توجد طلبات' : 'No orders'));
+          if (docs.isEmpty) return Center(child: Text(isAr ? 'لا توجد طلبات' : 'No orders', style: TextStyle(color: textColor)));
 
           final sortedOrders = docs.toList()..sort((a, b) {
             final aTime = (a.data() as Map)['createdAt'] as Timestamp?;
@@ -78,11 +83,11 @@ class _OrdersListViewState extends State<OrdersListView> {
           if (userRole == 'owner') _markAsSeen();
 
           return ListView.builder(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 140),
             itemCount: sortedOrders.length,
             itemBuilder: (context, index) {
               final order = sortedOrders[index].data() as Map<String, dynamic>;
-              return _buildOrderCard(context, sortedOrders[index].id, order, isAr, primaryColor);
+              return _buildOrderCard(context, sortedOrders[index].id, order, isAr, primaryColor, isDark, textColor);
             },
           );
         },
@@ -90,14 +95,18 @@ class _OrdersListViewState extends State<OrdersListView> {
     );
   }
 
-  Widget _buildOrderCard(BuildContext context, String orderId, Map<String, dynamic> order, bool isAr, Color primaryColor) {
+  Widget _buildOrderCard(BuildContext context, String orderId, Map<String, dynamic> order, bool isAr, Color primaryColor, bool isDark, Color textColor) {
     String status = order['status'] ?? 'pending';
     var statusInfo = orderStatuses[status] ?? orderStatuses['pending']!;
     int currentStep = statusInfo['step'];
 
     return Card(
+      color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
       margin: const EdgeInsets.only(bottom: 20),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: isDark ? BorderSide(color: Colors.white.withOpacity(0.05)) : BorderSide.none,
+      ),
       elevation: 2,
       child: Column(
         children: [
@@ -118,28 +127,28 @@ class _OrdersListViewState extends State<OrdersListView> {
                 if (order['items'] != null) ...(order['items'] as List).map((item) => Padding(
                   padding: const EdgeInsets.only(bottom: 4),
                   child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                    Text('${item['quantity']}x ${item['name']}', style: const TextStyle(fontSize: 14)),
+                    Text('${item['quantity']}x ${item['name']}', style: TextStyle(fontSize: 14, color: textColor)),
                     Text('${item['price']} ج.م', style: const TextStyle(color: Colors.grey, fontSize: 12)),
                   ]),
                 )),
                 const Divider(height: 24),
-                _infoRow(Icons.person_outline, '${isAr ? 'العميل:' : 'Client:'} ${order['userName']}'),
-                _infoRow(Icons.phone_outlined, '${isAr ? 'الهاتف:' : 'Phone:'} ${order['userPhone']}'),
-                _infoRow(Icons.location_on_outlined, '${isAr ? 'العنوان:' : 'Address:'} ${order['address']}'),
+                _infoRow(Icons.person_outline, '${isAr ? 'العميل:' : 'Client:'} ${order['userName']}', textColor),
+                _infoRow(Icons.phone_outlined, '${isAr ? 'الهاتف:' : 'Phone:'} ${order['userPhone']}', textColor),
+                _infoRow(Icons.location_on_outlined, '${isAr ? 'العنوان:' : 'Address:'} ${order['address']}', textColor),
                 const SizedBox(height: 10),
                 Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                  Text(isAr ? 'الإجمالي النهائي:' : 'Total Amount:', style: const TextStyle(fontWeight: FontWeight.bold)),
-                  Text('${order['totalPrice']} ج.م', style: TextStyle(color: primaryColor, fontWeight: FontWeight.bold, fontSize: 18)),
+                  Text(isAr ? 'الإجمالي النهائي:' : 'Total Amount:', style: TextStyle(fontWeight: FontWeight.bold, color: textColor)),
+                  Text('${order['totalPrice']} ج.م', style: TextStyle(color: isDark ? const Color(0xFFC5A059) : primaryColor, fontWeight: FontWeight.bold, fontSize: 18)),
                 ]),
                 
                 if (currentStep >= 0) ...[
                   const SizedBox(height: 25),
-                  _buildTrackingIndicator(currentStep, isAr, primaryColor),
+                  _buildTrackingIndicator(currentStep, isAr, isDark ? const Color(0xFFC5A059) : primaryColor),
                 ],
               ],
             ),
           ),
-          if (userRole == 'doctor') _buildDoctorActions(orderId, status, isAr),
+          if (userRole == 'doctor') _buildDoctorActions(orderId, status, isAr, isDark),
         ],
       ),
     );
@@ -168,11 +177,11 @@ class _OrdersListViewState extends State<OrdersListView> {
     );
   }
 
-  Widget _buildDoctorActions(String orderId, String currentStatus, bool isAr) {
+  Widget _buildDoctorActions(String orderId, String currentStatus, bool isAr, bool isDark) {
     List<String> statuses = ['pending', 'processing', 'shipped', 'delivered', 'rejected'];
     return Container(
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: Colors.grey.shade50, borderRadius: const BorderRadius.vertical(bottom: Radius.circular(20))),
+      decoration: BoxDecoration(color: isDark ? Colors.black12 : Colors.grey.shade50, borderRadius: const BorderRadius.vertical(bottom: Radius.circular(20))),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -202,7 +211,7 @@ class _OrdersListViewState extends State<OrdersListView> {
     );
   }
 
-  Widget _infoRow(IconData icon, String text) => Padding(padding: const EdgeInsets.only(bottom: 6), child: Row(children: [Icon(icon, size: 16, color: Colors.grey), const SizedBox(width: 8), Expanded(child: Text(text, style: const TextStyle(fontSize: 13)))]));
+  Widget _infoRow(IconData icon, String text, Color textColor) => Padding(padding: const EdgeInsets.only(bottom: 6), child: Row(children: [Icon(icon, size: 16, color: Colors.grey), const SizedBox(width: 8), Expanded(child: Text(text, style: TextStyle(fontSize: 13, color: textColor)))]));
 
   void _updateStatus(String id, String status) {
     FirebaseFirestore.instance.collection('orders').doc(id).update({'status': status, 'seenByOwner': false});

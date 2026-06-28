@@ -67,7 +67,6 @@ class _QrScannerViewState extends State<QrScannerView> with WidgetsBindingObserv
   }
 
   String _extractIdFromUrl(String data) {
-    // استخراج المعرف من الرابط (يأخذ الجزء الأخير بعد /)
     if (data.contains('/')) {
       return data.split('/').last.trim();
     }
@@ -80,8 +79,6 @@ class _QrScannerViewState extends State<QrScannerView> with WidgetsBindingObserv
       final doc = await FirebaseFirestore.instance.collection('pets').doc(petId).get();
       if (doc.exists) {
         final data = doc.data() as Map<String, dynamic>;
-        
-        // التحقق من دور المستخدم قبل عرض البيانات (خاص بالدكتور)
         final currentUser = FirebaseAuth.instance.currentUser;
         String? role;
         if (currentUser != null) {
@@ -91,29 +88,31 @@ class _QrScannerViewState extends State<QrScannerView> with WidgetsBindingObserv
 
         if (mounted && role == 'doctor') {
           bool isAr = MyApp.of(context).locale.languageCode == 'ar';
+          bool isDark = Theme.of(context).scaffoldBackgroundColor.value == const Color(0xFF2D2D2D).value;
+          Color textColor = isDark ? Colors.white : Colors.black87;
+          Color gold = const Color(0xFFC5A059);
+
           bool proceed = await showDialog(
             context: context,
             barrierDismissible: false,
             builder: (c) => AlertDialog(
+              backgroundColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
-              title: Text(isAr ? 'تم التعرف على أليف' : 'Pet Recognized'),
+              title: Text(isAr ? 'تم التعرف على أليف' : 'Pet Recognized', style: TextStyle(color: textColor)),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   const Icon(Icons.check_circle_outline, color: Colors.green, size: 50),
                   const SizedBox(height: 15),
-                  Text('${isAr ? 'الاسم:' : 'Name:'} ${data['animalName']}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                  Text('${isAr ? 'الاسم:' : 'Name:'} ${data['animalName']}', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: textColor)),
                   Text('ID: $petId', style: const TextStyle(color: Colors.grey, fontSize: 12)),
                 ],
               ),
               actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(c, false),
-                  child: Text(isAr ? 'إغلاق' : 'Close', style: const TextStyle(color: Colors.grey)),
-                ),
+                TextButton(onPressed: () => Navigator.pop(c, false), child: Text(isAr ? 'إغلاق' : 'Close', style: const TextStyle(color: Colors.grey))),
                 ElevatedButton(
                   onPressed: () => Navigator.pop(c, true),
-                  style: ElevatedButton.styleFrom(backgroundColor: Theme.of(context).primaryColor, foregroundColor: Colors.white),
+                  style: ElevatedButton.styleFrom(backgroundColor: isDark ? gold : Theme.of(context).primaryColor, foregroundColor: isDark ? Colors.black87 : Colors.white),
                   child: Text(isAr ? 'فتح السجل' : 'Open Record'),
                 ),
               ],
@@ -127,9 +126,7 @@ class _QrScannerViewState extends State<QrScannerView> with WidgetsBindingObserv
           }
         }
 
-        if (mounted) {
-          _showResultSheet(petId, data);
-        }
+        if (mounted) _showResultSheet(petId, data);
       } else {
         if (mounted) {
           setState(() => isProcessing = false);
@@ -160,148 +157,123 @@ class _QrScannerViewState extends State<QrScannerView> with WidgetsBindingObserv
     final currentUser = FirebaseAuth.instance.currentUser;
     bool isAr = MyApp.of(context).locale.languageCode == 'ar';
     Color primaryColor = Theme.of(context).primaryColor;
+    bool isDark = Theme.of(context).scaffoldBackgroundColor.value == const Color(0xFF2D2D2D).value;
+    Color textColor = isDark ? Colors.white : Colors.black87;
+    Color gold = const Color(0xFFC5A059);
 
-    // فحص إذا كان هذا الحيوان مضاف بالفعل لهذا المستخدم، ومعرفة نوع الحساب
     bool alreadyLinked = false;
+    List<String> myPetIds = [];
     String? role;
     if (currentUser != null) {
       final userDoc = await FirebaseFirestore.instance.collection('users').doc(currentUser.uid).get();
-      alreadyLinked = userDoc.data()?['petId'] == petId;
+      myPetIds = List<String>.from(userDoc.data()?['petIds'] ?? []);
+      alreadyLinked = myPetIds.contains(petId);
       role = userDoc.data()?['role'];
     }
 
-    showModalBottomSheet(
+    if (!mounted) return;
+
+    final result = await showModalBottomSheet<String>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => Container(
-        decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(30))),
+        decoration: BoxDecoration(color: isDark ? const Color(0xFF1E1E1E) : Colors.white, borderRadius: const BorderRadius.vertical(top: Radius.circular(30))),
         padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2))),
+            Container(width: 40, height: 4, decoration: BoxDecoration(color: isDark ? Colors.white24 : Colors.grey[300], borderRadius: BorderRadius.circular(2))),
             const SizedBox(height: 20),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Icon(Icons.pets, color: primaryColor, size: 40),
+                Icon(Icons.pets, color: isDark ? gold : primaryColor, size: 40),
                 if (currentUser != null)
                   IconButton(
                     icon: const Icon(Icons.edit, color: Colors.orange),
-                    onPressed: () {
-                      if (role == 'doctor' || alreadyLinked) {
-                        Navigator.pop(context); // غلق الشيت
-                        Navigator.push(context, MaterialPageRoute(builder: (context) => EditPetView(petId: petId, initialData: data))).then((value) {
-                          if (value == true && mounted) Navigator.pop(context); // الخروج من الماسح
-                        });
-                      } else {
-                        _verifyPassword(petId, data, true); // طلب الباسورد للمستخدم العادي (إذا لم يكن أليفه)
-                      }
-                    },
+                    onPressed: () => (role == 'doctor' || alreadyLinked) ? Navigator.pop(context, 'edit') : _verifyPassword(petId, data, true),
                   ),
               ],
             ),
             const SizedBox(height: 16),
-            Text(isAr ? 'بيانات الأليف' : 'Pet Details', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            Text(isAr ? 'بيانات الأليف' : 'Pet Details', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: textColor)),
             const SizedBox(height: 20),
-            _buildDataRow(isAr ? 'الاسم:' : 'Name:', data['animalName']),
-            _buildDataRow(isAr ? 'النوع:' : 'Type:', data['animalType']),
-            _buildDataRow(isAr ? 'الصاحب:' : 'Owner:', data['ownerName']),
-            _buildDataRow(isAr ? 'الهاتف:' : 'Phone:', data['ownerPhone']),
+            _buildDataRow(isAr ? 'الاسم:' : 'Name:', data['animalName'], textColor),
+            _buildDataRow(isAr ? 'النوع:' : 'Type:', data['animalType'], textColor),
+            _buildDataRow(isAr ? 'الصاحب:' : 'Owner:', data['ownerName'], textColor),
+            _buildDataRow(isAr ? 'الهاتف:' : 'Phone:', data['ownerPhone'], textColor),
             const SizedBox(height: 30),
-            
-            // زر الإضافة لـ "أليفي" يظهر فقط للمستخدم العادي ولم يقم بالإضافة بعد
             if (currentUser != null && role == 'owner' && !alreadyLinked)
               Padding(
                 padding: const EdgeInsets.only(bottom: 12),
-                child: SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton.icon(
-                    onPressed: () => _verifyPassword(petId, data, false), // false يعني إضافة للقائمة
-                    icon: const Icon(Icons.add_task),
-                    label: Text(isAr ? 'إضافة إلى أليفي' : 'Add to My Pet'),
-                    style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16), side: BorderSide(color: primaryColor), foregroundColor: primaryColor),
-                  ),
-                ),
+                child: SizedBox(width: double.infinity, child: OutlinedButton.icon(onPressed: () => _verifyPassword(petId, data, false), icon: const Icon(Icons.add_task), label: Text(isAr ? 'إضافة إلى أليفي' : 'Add to My Pet'), style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16), side: BorderSide(color: isDark ? gold : primaryColor), foregroundColor: isDark ? gold : primaryColor))),
               ),
-
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () => Navigator.pop(context),
-                style: ElevatedButton.styleFrom(backgroundColor: primaryColor, padding: const EdgeInsets.symmetric(vertical: 16)),
-                child: Text(isAr ? 'إغلاق' : 'Close', style: const TextStyle(color: Colors.white)),
-              ),
-            ),
+            SizedBox(width: double.infinity, child: ElevatedButton(onPressed: () => Navigator.pop(context, 'close'), style: ElevatedButton.styleFrom(backgroundColor: isDark ? gold : primaryColor, foregroundColor: isDark ? Colors.black87 : Colors.white, padding: const EdgeInsets.symmetric(vertical: 16)), child: Text(isAr ? 'إغلاق' : 'Close', style: const TextStyle(fontWeight: FontWeight.bold)))),
           ],
         ),
       ),
-    ).then((_) { 
-      if (mounted) {
-        // بعد إغلاق صفحة البيانات، نخرج من الماسح ونعود للرئيسية
-        Navigator.pop(context);
-      }
-    });
+    );
+
+    if (!mounted) return;
+    if (result == 'edit') {
+      Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => EditPetView(petId: petId, initialData: data)));
+    } else {
+      Navigator.pop(context);
+    }
   }
 
   void _verifyPassword(String petId, Map<String, dynamic> data, bool forEdit) {
     final passController = TextEditingController();
     bool isAr = MyApp.of(context).locale.languageCode == 'ar';
+    bool isDark = Theme.of(context).scaffoldBackgroundColor.value == const Color(0xFF2D2D2D).value;
+    Color textColor = isDark ? Colors.white : Colors.black87;
+    Color gold = const Color(0xFFC5A059);
+
     showDialog(
       context: context,
       builder: (c) => AlertDialog(
+        backgroundColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text(forEdit 
-          ? (isAr ? 'كلمة سر التعديل' : 'Edit Password')
-          : (isAr ? 'كلمة سر الإضافة' : 'Add Password')),
+        title: Text(forEdit ? (isAr ? 'كلمة سر التعديل' : 'Edit Password') : (isAr ? 'كلمة سر الإضافة' : 'Add Password'), style: TextStyle(color: textColor)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(isAr ? 'أدخل كلمة السر الخاصة بهذا الأليف' : 'Enter the password for this pet', style: const TextStyle(fontSize: 12, color: Colors.grey)),
             const SizedBox(height: 15),
-            TextField(
-              controller: passController,
-              decoration: InputDecoration(hintText: isAr ? 'كلمة السر' : 'Password', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
-              autofocus: true,
-            ),
+            TextField(controller: passController, style: TextStyle(color: textColor), decoration: InputDecoration(hintText: isAr ? 'كلمة السر' : 'Password', hintStyle: const TextStyle(color: Colors.grey), enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: isDark ? Colors.white10 : Colors.grey.shade300)), focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: isDark ? gold : Theme.of(context).primaryColor))), autofocus: true),
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(c), child: Text(isAr ? 'إلغاء' : 'Cancel')),
+          TextButton(onPressed: () => Navigator.pop(c), child: Text(isAr ? 'إلغاء' : 'Cancel', style: const TextStyle(color: Colors.grey))),
           ElevatedButton(
             onPressed: () async {
               if (passController.text == data['editPassword']) {
-                Navigator.pop(c); // غلق الديالوج
+                Navigator.pop(c);
                 if (forEdit) {
-                  Navigator.pop(context); // غلق الشيت
-                  Navigator.push(context, MaterialPageRoute(builder: (context) => EditPetView(petId: petId, initialData: data))).then((value) {
-                    if (value == true && mounted) {
-                      Navigator.pop(context); // الخروج من شاشة الماسح والعودة للرئيسية
-                    }
-                  });
+                  Navigator.pop(context); 
+                  Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => EditPetView(petId: petId, initialData: data)));
                 } else {
-                  // عملية الإضافة لقائمة "أليفي"
                   final user = FirebaseAuth.instance.currentUser;
-                  await FirebaseFirestore.instance.collection('users').doc(user!.uid).update({'petId': petId});
-                  // تحديث صاحب الحيوان في وثيقة الحيوان نفسه لربط السوشيال ميديا
+                  final userRef = FirebaseFirestore.instance.collection('users').doc(user!.uid);
+                  final userDoc = await userRef.get();
+                  final List petIds = List.from(userDoc.data()?['petIds'] ?? []);
+                  if (petIds.length >= 2) {
+                    if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(isAr ? 'عذراً، يمكنك إضافة حيوانين فقط كحد أقصى' : 'Sorry, you can only add up to 2 pets'), backgroundColor: Colors.orange));
+                    return;
+                  }
+                  await userRef.update({'petIds': FieldValue.arrayUnion([petId])});
                   await FirebaseFirestore.instance.collection('pets').doc(petId).update({'ownerUid': user.uid});
-                  
                   if (mounted) {
-                    Navigator.pop(context); // غلق الشيت (Bottom Sheet)
-                    Navigator.pop(context); // الخروج من شاشة الماسح (Scanner View)
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(isAr ? 'تمت الإضافة إلى أليفي بنجاح!' : 'Added to My Pet successfully!'), 
-                        backgroundColor: Colors.green
-                      )
-                    );
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(isAr ? 'تمت الإضافة إلى أليفي بنجاح!' : 'Added to My Pet successfully!'), backgroundColor: Colors.green));
                   }
                 }
               } else {
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(isAr ? 'كلمة السر خاطئة!' : 'Wrong Password!'), backgroundColor: Colors.red));
+                if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Row(children: [const Icon(Icons.error_outline, color: Colors.white), const SizedBox(width: 10), Expanded(child: Text(isAr ? 'عذراً، رمز التعديل غير صحيح. يرجى التأكد من الرمز والمحاولة مرة أخرى.' : 'Oops! Incorrect edit password. Please check the code and try again.', style: const TextStyle(fontWeight: FontWeight.bold)))]), backgroundColor: Colors.red.shade800, behavior: SnackBarBehavior.floating, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)), duration: const Duration(seconds: 3)));
               }
             },
+            style: ElevatedButton.styleFrom(backgroundColor: isDark ? gold : Theme.of(context).primaryColor, foregroundColor: isDark ? Colors.black87 : Colors.white),
             child: Text(isAr ? 'تأكيد' : 'Confirm'),
           ),
         ],
@@ -314,27 +286,9 @@ class _QrScannerViewState extends State<QrScannerView> with WidgetsBindingObserv
     bool isAr = MyApp.of(context).locale.languageCode == 'ar';
     return Scaffold(
       backgroundColor: Colors.black,
-      appBar: AppBar(
-        title: Text(isAr ? 'ماسح QPet' : 'QPet Scanner'),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        foregroundColor: Colors.white,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.image),
-            onPressed: _pickAndScanImage,
-            tooltip: isAr ? 'مسح من المعرض' : 'Scan from Gallery',
-          ),
-        ],
-      ),
+      appBar: AppBar(title: Text(isAr ? 'ماسح QPet' : 'QPet Scanner'), backgroundColor: Colors.transparent, elevation: 0, foregroundColor: Colors.white, actions: [IconButton(icon: const Icon(Icons.image), onPressed: _pickAndScanImage, tooltip: isAr ? 'مسح من المعرض' : 'Scan from Gallery')]),
       body: !isPermissionGranted ? Center(child: Text(isAr ? 'يرجى إعطاء إذن الكاميرا' : 'Please grant camera permission', style: const TextStyle(color: Colors.white))) :
-      Stack(
-        children: [
-          MobileScanner(controller: controller, onDetect: _onDetect),
-          Center(child: Container(width: 250, height: 250, decoration: BoxDecoration(border: Border.all(color: Theme.of(context).primaryColor, width: 4), borderRadius: BorderRadius.circular(20)))),
-          if (isProcessing) Center(child: CircularProgressIndicator(color: Theme.of(context).primaryColor)),
-        ],
-      ),
+      Stack(children: [MobileScanner(controller: controller, onDetect: _onDetect), Center(child: Container(width: 250, height: 250, decoration: BoxDecoration(border: Border.all(color: Theme.of(context).primaryColor, width: 4), borderRadius: BorderRadius.circular(20)))), if (isProcessing) Center(child: CircularProgressIndicator(color: Theme.of(context).primaryColor))]),
     );
   }
 
@@ -342,7 +296,7 @@ class _QrScannerViewState extends State<QrScannerView> with WidgetsBindingObserv
     showDialog(context: context, builder: (c) => AlertDialog(content: Text(msg), actions: [TextButton(onPressed: () => Navigator.pop(c), child: const Text('OK'))]));
   }
 
-  Widget _buildDataRow(String l, String? v) => Padding(padding: const EdgeInsets.symmetric(vertical: 8), child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text(l, style: const TextStyle(color: Colors.grey)), Text(v ?? '?', style: const TextStyle(fontWeight: FontWeight.bold))]));
+  Widget _buildDataRow(String l, String? v, Color textColor) => Padding(padding: const EdgeInsets.symmetric(vertical: 8), child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text(l, style: const TextStyle(color: Colors.grey)), Text(v ?? '?', style: TextStyle(fontWeight: FontWeight.bold, color: textColor))]));
 
   @override
   void dispose() { WidgetsBinding.instance.removeObserver(this); controller.dispose(); super.dispose(); }
