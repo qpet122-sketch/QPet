@@ -252,13 +252,15 @@ class PublicPetProfilePage extends StatelessWidget {
                           const SizedBox(height: 15),
                           _medInfo(isAr ? 'الوزن' : 'Weight', '${data['weight'] ?? '--'} kg'),
                           _medInfo(isAr ? 'العمر' : 'Age', data['age']),
+
+                          // عرض قوائم السجل الطبي بالكامل
+                          _buildMedicalList(isAr ? 'التطعيمات:' : 'Vaccinations:', data['vaccinations_list'], (item) => '${item['type']} (${item['date']})${item['next'] != '' ? ' -> Next: ${item['next']}' : ''}', isAr),
+                          _buildMedicalList(isAr ? 'العمليات الجراحية:' : 'Surgeries:', data['surgeries_list'], (item) => '${item['name']} (${item['date']})', isAr),
+                          _buildMedicalList(isAr ? 'الأدوية الحالية:' : 'Current Medications:', data['medications_list'], (item) => '${item['name']} - ${item['duration']}', isAr),
+                          _buildMedicalList(isAr ? 'جرعات الديدان:' : 'Deworming Doses:', data['deworming_list'], (item) => '${item['name']} (${item['date']})', isAr),
                           
-                          if (data['deworming_list'] != null && (data['deworming_list'] as List).isNotEmpty) ...[
-                            const SizedBox(height: 20),
-                            Align(alignment: isAr ? Alignment.centerRight : Alignment.centerLeft, child: Text(isAr ? 'أحدث جرعات الديدان:' : 'Latest Deworming Doses:', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.brown))),
-                            const SizedBox(height: 10),
-                            ...(data['deworming_list'] as List).reversed.take(2).map((e) => _medInfo(e['name'] ?? '', e['date'] ?? '')),
-                          ],
+                          _buildSimpleMedicalList(isAr ? 'سجل الحساسية:' : 'Allergies:', data['allergies_list'], isAr),
+                          _buildSimpleMedicalList(isAr ? 'الأمراض المزمنة:' : 'Chronic Diseases:', data['chronic_diseases_list'], isAr),
                           
                           const SizedBox(height: 40),
                           const Text('QPet Team - Smart ID System', style: TextStyle(color: Colors.grey, fontSize: 12)),
@@ -272,6 +274,39 @@ class PublicPetProfilePage extends StatelessWidget {
           );
         },
       ),
+    );
+  }
+
+  Widget _buildMedicalList(String title, dynamic list, String Function(dynamic) labelBuilder, bool isAr) {
+    if (list == null || (list as List).isEmpty) return const SizedBox.shrink();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 20),
+        Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.brown)),
+        const SizedBox(height: 8),
+        ...(list as List).map((item) => _medInfo('', labelBuilder(item))),
+      ],
+    );
+  }
+
+  Widget _buildSimpleMedicalList(String title, dynamic list, bool isAr) {
+    if (list == null || (list as List).isEmpty) return const SizedBox.shrink();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 20),
+        Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.redAccent)),
+        const SizedBox(height: 8),
+        ...(list as List).map((item) => Padding(
+          padding: const EdgeInsets.only(bottom: 4),
+          child: Row(children: [
+            const Icon(Icons.circle, size: 6, color: Colors.grey),
+            const SizedBox(width: 8),
+            Expanded(child: Text(item.toString(), style: const TextStyle(fontSize: 14))),
+          ]),
+        )),
+      ],
     );
   }
 

@@ -253,37 +253,25 @@ class _AddAnimalViewState extends State<AddAnimalView> {
                       child: pw.Column(
                         mainAxisSize: pw.MainAxisSize.min,
                         children: [
-                          pw.Text('QPet Smart ID', style: pw.TextStyle(fontSize: 8, font: fontBold, color: PdfColors.teal)),
+                          pw.Text(' QPet SmartID #${pet['id']}', style: pw.TextStyle(fontSize: 8, font: fontBold, color: PdfColors.teal)),
                           pw.SizedBox(height: 3),
-                          // الرمز وبجانبه الرقم من اليمين (مضغوط)
-                          pw.Row(
-                            mainAxisSize: pw.MainAxisSize.min,
-                            mainAxisAlignment: pw.MainAxisAlignment.center,
-                            crossAxisAlignment: pw.CrossAxisAlignment.end,
-                            children: [
-                              pw.Container(
-                                padding: const pw.EdgeInsets.all(2),
-                                decoration: pw.BoxDecoration(
-                                  border: pw.Border.all(color: PdfColors.grey200), 
-                                  borderRadius: const pw.BorderRadius.all(pw.Radius.circular(4))
-                                ),
-                                child: pw.BarcodeWidget(
-                                  data: pet['url'],
-                                  barcode: pw.Barcode.qrCode(),
-                                  width: 80,
-                                  height: 80,
-                                ),
-                              ),
-                              pw.SizedBox(width: 3),
-                              pw.Text('${pet['id']}', 
-                                style: pw.TextStyle(fontSize: 8, font: font, color: PdfColors.grey800)),
-                            ],
+                          pw.Container(
+                            padding: const pw.EdgeInsets.all(2),
+                            decoration: pw.BoxDecoration(
+                              border: pw.Border.all(color: PdfColors.grey200), 
+                              borderRadius: const pw.BorderRadius.all(pw.Radius.circular(4))
+                            ),
+                            child: pw.BarcodeWidget(
+                              data: pet['url'],
+                              barcode: pw.Barcode.qrCode(),
+                              width: 80,
+                              height: 80,
+                            ),
                           ),
                         ],
                       ),
                     ),
                     pw.SizedBox(height: 12),
-                    pw.Text(isAr ? 'بيانات تعديل الحساب' : 'Account Edit Details', style: pw.TextStyle(fontSize: 8, font: font, color: PdfColors.grey600)),
                     // الـ ID وكلمة السر معاً
                     pw.Container(
                       margin: const pw.EdgeInsets.only(top: 5),
