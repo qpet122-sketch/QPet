@@ -151,7 +151,7 @@ class PublicPetProfilePage extends StatelessWidget {
         backgroundColor: Colors.white,
         elevation: 0.5,
         centerTitle: true,
-        title: Image.asset('assets/final_logo.jpeg', height: 40),
+        title: Image.asset('assets/final_logo-Photoroom.png', height: 40),
         actions: [
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 8),
@@ -208,7 +208,7 @@ class PublicPetProfilePage extends StatelessWidget {
                         children: [
                           ClipRRect(
                             borderRadius: BorderRadius.circular(20),
-                            child: Image.asset('assets/final_logo.jpeg', width: 120, height: 120, fit: BoxFit.contain),
+                            child: Image.asset('assets/final_logo-Photoroom.png', width: 120, height: 120, fit: BoxFit.contain),
                           ),
                           const SizedBox(height: 20),
                           Container(
@@ -226,7 +226,10 @@ class PublicPetProfilePage extends StatelessWidget {
                         children: [
                           Text(data['animalName'] ?? '', style: const TextStyle(fontSize: 36, fontWeight: FontWeight.bold, color: primaryGreen)),
                           const SizedBox(height: 5),
-                          Text(data['animalType'] ?? '', style: const TextStyle(fontSize: 18, color: royalGold, fontWeight: FontWeight.w500)),
+                          Text(
+                            '${data['animalType'] ?? ''}${data['animalBreed'] != null && data['animalBreed'].toString().isNotEmpty ? ' - ${data['animalBreed']}' : ''}', 
+                            style: const TextStyle(fontSize: 18, color: royalGold, fontWeight: FontWeight.w500)
+                          ),
                           
                           const SizedBox(height: 30),
                           _buildSectionTitle(isAr ? 'البيانات الأساسية' : 'Basic Information', royalGold),

@@ -180,7 +180,7 @@ class _HomeScreenState extends State<HomeScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               _circleButton(Icons.notifications_none, green, () => Navigator.push(context, MaterialPageRoute(builder: (_) => const OrdersListView()))),
-              Image.asset('assets/final_logo.jpeg', height: 40),
+              Image.asset('assets/final_logo-Photoroom.png', height: 40),
               _circleButton(Icons.share_outlined, Colors.grey, _showDownloadQr),
             ],
           ),
@@ -347,7 +347,10 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Icon(Icons.pets, color: color),
         ),
         title: Text(pet['animalName'] ?? '', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: isDark ? Colors.white : color)),
-        subtitle: Text(pet['animalType'] ?? '', style: TextStyle(color: gold, fontSize: 13)),
+        subtitle: Text(
+          '${pet['animalType'] ?? ''}${pet['animalBreed'] != null && pet['animalBreed'].toString().isNotEmpty ? ' - ${pet['animalBreed']}' : ''}', 
+          style: TextStyle(color: gold, fontSize: 13)
+        ),
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -574,7 +577,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _showDownloadQr() {
     const downloadUrl = 'https://drive.google.com/file/d/1D1zcqoLgvFiJjJ54vQrYEKWtFQWFlGav/view?usp=sharing';
-    showDialog(context: context, builder: (context) => AlertDialog(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)), title: const Center(child: Text('QPet App')), content: SizedBox(width: double.maxFinite, child: Column(mainAxisSize: MainAxisSize.min, children: [RepaintBoundary(key: _appQrKey, child: Container(color: Colors.white, padding: const EdgeInsets.all(10), child: QrImageView(data: downloadUrl, size: 200, embeddedImage: const AssetImage('assets/final_logo.jpeg'), embeddedImageStyle: const QrEmbeddedImageStyle(size: Size(40, 40)), eyeStyle: const QrEyeStyle(eyeShape: QrEyeShape.circle, color: Colors.teal)))), const SizedBox(height: 20), ElevatedButton.icon(onPressed: _shareAppQr, icon: const Icon(Icons.share), label: const Text('مشاركة الرابط'), style: ElevatedButton.styleFrom(backgroundColor: Theme.of(context).primaryColor, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))))]))));
+    showDialog(context: context, builder: (context) => AlertDialog(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)), title: const Center(child: Text('QPet App')), content: SizedBox(width: double.maxFinite, child: Column(mainAxisSize: MainAxisSize.min, children: [RepaintBoundary(key: _appQrKey, child: Container(color: Colors.white, padding: const EdgeInsets.all(10), child: QrImageView(data: downloadUrl, size: 200, embeddedImage: const AssetImage('assets/final_logo-Photoroom.png'), embeddedImageStyle: const QrEmbeddedImageStyle(size: Size(40, 40)), eyeStyle: const QrEyeStyle(eyeShape: QrEyeShape.circle, color: Colors.teal)))), const SizedBox(height: 20), ElevatedButton.icon(onPressed: _shareAppQr, icon: const Icon(Icons.share), label: const Text('مشاركة الرابط'), style: ElevatedButton.styleFrom(backgroundColor: Theme.of(context).primaryColor, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))))]))));
   }
 
   Future<void> _shareAppQr() async {
@@ -617,7 +620,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       child: QrImageView(
                         data: url, 
                         version: QrVersions.auto, 
-                        embeddedImage: const AssetImage('assets/final_logo.jpeg'),
+                        embeddedImage: const AssetImage('assets/final_logo-Photoroom.png'),
                         embeddedImageStyle: const QrEmbeddedImageStyle(size: Size(40, 40)),
                         eyeStyle: QrEyeStyle(eyeShape: QrEyeShape.circle, color: primaryColor)
                       )

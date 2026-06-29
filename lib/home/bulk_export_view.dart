@@ -34,7 +34,7 @@ class _BulkExportViewState extends State<BulkExportView> {
       final fontBold = await PdfGoogleFonts.amiriBold();
 
       // تحميل صورة اللوجو مرة واحدة قبل البدء
-      final logoData = (await rootBundle.load('assets/final_logo.jpeg')).buffer.asUint8List();
+      final logoData = (await rootBundle.load('assets/final_logo-Photoroom.png')).buffer.asUint8List();
       final logoImage = pw.MemoryImage(logoData);
 
       for (var pet in pets) {

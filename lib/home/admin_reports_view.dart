@@ -182,7 +182,7 @@ class _AdminReportsViewState extends State<AdminReportsView> with SingleTickerPr
                         child: QrImageView(
                           data: url, 
                           version: QrVersions.auto, 
-                          embeddedImage: const AssetImage('assets/final_logo.jpeg'),
+                          embeddedImage: const AssetImage('assets/final_logo-Photoroom.png'),
                           embeddedImageStyle: const QrEmbeddedImageStyle(size: Size(35, 35)),
                           eyeStyle: QrEyeStyle(eyeShape: QrEyeShape.circle, color: primaryColor)
                         )
@@ -389,7 +389,10 @@ class _AdminReportsViewState extends State<AdminReportsView> with SingleTickerPr
               ],
             ),
             title: Text(pet['animalName'] ?? '', style: TextStyle(fontWeight: FontWeight.bold, color: textColor)),
-            subtitle: Text('${isAr ? 'النوع:' : 'Type:'} ${pet['animalType'] ?? ''} | ${isAr ? 'المالك:' : 'Owner:'} ${pet['ownerName'] ?? ''}', style: const TextStyle(color: Colors.grey, fontSize: 12)),
+            subtitle: Text(
+              '${isAr ? 'الفصيلة:' : 'Species:'} ${pet['animalType'] ?? ''}${pet['animalBreed'] != null && pet['animalBreed'].toString().isNotEmpty ? ' (${pet['animalBreed']})' : ''} | ${isAr ? 'المالك:' : 'Owner:'} ${pet['ownerName'] ?? ''}', 
+              style: const TextStyle(color: Colors.grey, fontSize: 12)
+            ),
             trailing: _isSelectionMode 
                 ? Checkbox(
                     value: isSelected, 

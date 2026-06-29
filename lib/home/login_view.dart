@@ -118,7 +118,7 @@ class _LoginViewState extends State<LoginView> {
                 Hero(
                   tag: 'app_logo',
                   child: Image.asset(
-                    'assets/final_logo.jpeg', 
+                    'assets/final_logo-Photoroom.png',
                     width: logoSize, 
                     height: logoSize, 
                     fit: BoxFit.contain

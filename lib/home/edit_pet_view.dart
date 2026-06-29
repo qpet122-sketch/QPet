@@ -22,6 +22,7 @@ class _EditPetViewState extends State<EditPetView> {
   
   late TextEditingController _nameController;
   late TextEditingController _typeController;
+  late TextEditingController _breedController; // كود جديد
   late TextEditingController _ownerNameController;
   late TextEditingController _ownerPhoneController;
   late TextEditingController _weightController;
@@ -45,6 +46,7 @@ class _EditPetViewState extends State<EditPetView> {
     final d = widget.initialData;
     _nameController = TextEditingController(text: d['animalName'] ?? '');
     _typeController = TextEditingController(text: d['animalType'] ?? '');
+    _breedController = TextEditingController(text: d['animalBreed'] ?? ''); // كود جديد
     _ownerNameController = TextEditingController(text: d['ownerName'] ?? '');
     _ownerPhoneController = TextEditingController(text: d['ownerPhone'] ?? '');
     _weightController = TextEditingController(text: d['weight']?.toString() ?? '');
@@ -105,6 +107,7 @@ class _EditPetViewState extends State<EditPetView> {
         'ownerName': _ownerNameController.text.trim(),
         'ownerPhone': _ownerPhoneController.text.trim(),
         'animalType': _typeController.text.trim(),
+        'animalBreed': _breedController.text.trim(), // كود جديد
         'gender': _gender == 'female' ? (isAr ? 'أنثى' : 'Female') : (isAr ? 'ذكر' : 'Male'),
         'weight': _weightController.text,
         'age': _ageController.text,
@@ -241,7 +244,10 @@ class _EditPetViewState extends State<EditPetView> {
               _buildField(_nameController, isAr ? 'اسم الحيوان' : 'Pet Name', Icons.pets, isDark, primaryColor, gold),
               const SizedBox(height: 12),
               
-              _buildField(_typeController, isAr ? 'نوع الحيوان (قط، كلب...)' : 'Animal Type', Icons.category, isDark, primaryColor, gold),
+              _buildField(_typeController, isAr ? 'فصيلة الحيوان (قط، كلب...)' : 'Animal Species', Icons.category, isDark, primaryColor, gold),
+              const SizedBox(height: 12),
+
+              _buildField(_breedController, isAr ? 'سلالة الحيوان (شيرازي، هاسكي...)' : 'Animal Breed', Icons.pets_outlined, isDark, primaryColor, gold),
               const SizedBox(height: 12),
 
               Row(children: [
@@ -530,7 +536,8 @@ class _EditPetViewState extends State<EditPetView> {
           ),
           pw.SizedBox(height: 20),
           _pdfRow(isAr ? 'اسم الأليف:' : 'Pet Name:', _nameController.text, isAr, font, fontBold),
-          _pdfRow(isAr ? 'النوع:' : 'Type:', _typeController.text, isAr, font, fontBold),
+          _pdfRow(isAr ? 'الفصيلة:' : 'Species:', _typeController.text, isAr, font, fontBold),
+          _pdfRow(isAr ? 'السلالة:' : 'Breed:', _breedController.text, isAr, font, fontBold),
           _pdfRow(isAr ? 'الجنس:' : 'Gender:', _gender == 'female' ? (isAr ? 'أنثى' : 'Female') : (isAr ? 'ذكر' : 'Male'), isAr, font, fontBold),
           _pdfRow(isAr ? 'الوزن:' : 'Weight:', '${_weightController.text} kg', isAr, font, fontBold),
           _pdfRow(isAr ? 'العمر:' : 'Age:', _ageController.text, isAr, font, fontBold),
