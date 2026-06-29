@@ -55,15 +55,19 @@ class _QrScannerViewState extends State<QrScannerView> with WidgetsBindingObserv
         final code = result.barcodes.first.rawValue;
         if (code != null) await _processResult(code);
       } else {
-        setState(() => isProcessing = false);
         bool isAr = MyApp.of(context).locale.languageCode == 'ar';
-        _showErrorDialog(isAr ? 'لم يتم العثور على رمز QR في هذه الصورة.' : 'No QR code found in this image.');
-        controller.start();
+        await _showErrorDialog(isAr ? 'لم يتم العثور على رمز QR في هذه الصورة.' : 'No QR code found in this image.');
+        if (mounted) {
+          setState(() => isProcessing = false);
+          controller.start();
+        }
       }
     } catch (e) {
-      setState(() => isProcessing = false);
-      _showErrorDialog('Error: $e');
-      controller.start();
+      await _showErrorDialog('Error: $e');
+      if (mounted) {
+        setState(() => isProcessing = false);
+        controller.start();
+      }
     }
   }
 
@@ -130,17 +134,21 @@ class _QrScannerViewState extends State<QrScannerView> with WidgetsBindingObserv
         if (mounted) _showResultSheet(petId, data);
       } else {
         if (mounted) {
-          setState(() => isProcessing = false);
           bool isAr = MyApp.of(context).locale.languageCode == 'ar';
-          _showErrorDialog(isAr ? 'عذراً، هذا الرمز غير مسجل لدينا.' : 'Sorry, this code is not registered.');
-          controller.start();
+          await _showErrorDialog(isAr ? 'عذراً، هذا الرمز غير مسجل لدينا.' : 'Sorry, this code is not registered.');
+          if (mounted) {
+            setState(() => isProcessing = false);
+            controller.start();
+          }
         }
       }
     } catch (e) {
       if (mounted) {
-        setState(() => isProcessing = false);
-        _showErrorDialog('Error: $e');
-        controller.start();
+        await _showErrorDialog('Error: $e');
+        if (mounted) {
+          setState(() => isProcessing = false);
+          controller.start();
+        }
       }
     }
   }
@@ -343,8 +351,23 @@ class _QrScannerViewState extends State<QrScannerView> with WidgetsBindingObserv
     );
   }
 
-  void _showErrorDialog(String msg) {
-    showDialog(context: context, builder: (c) => AlertDialog(content: Text(msg), actions: [TextButton(onPressed: () => Navigator.pop(c), child: const Text('OK'))]));
+  Future<void> _showErrorDialog(String msg) async {
+    await showDialog(
+      context: context, 
+      barrierDismissible: false,
+      builder: (c) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        content: Text(msg, textAlign: TextAlign.center), 
+        actions: [
+          Center(
+            child: TextButton(
+              onPressed: () => Navigator.pop(c), 
+              child: const Text('OK', style: TextStyle(fontWeight: FontWeight.bold))
+            )
+          )
+        ]
+      )
+    );
   }
 
   Widget _buildDataRow(String l, String? v, Color textColor) => Padding(padding: const EdgeInsets.symmetric(vertical: 8), child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text(l, style: const TextStyle(color: Colors.grey)), Text(v ?? '?', style: TextStyle(fontWeight: FontWeight.bold, color: textColor))]));

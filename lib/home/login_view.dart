@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart'; // إضافة الاستيراد المفقود
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:vet/home/qr_scanner_view.dart';
@@ -108,6 +109,14 @@ class _LoginViewState extends State<LoginView> {
 
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF121212) : customGoldBg,
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(0),
+        child: AppBar(
+          elevation: 0,
+          backgroundColor: Colors.transparent,
+          systemOverlayStyle: isDark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
+        ),
+      ),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(

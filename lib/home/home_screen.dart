@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart'; // إضافة الاستيراد المفقود
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:qr_flutter/qr_flutter.dart';
@@ -148,23 +149,34 @@ class _HomeScreenState extends State<HomeScreen> {
       body = _buildHomeTab(isAr, primaryGreen, gold, isDark);
     }
 
-    return PopScope(
-      canPop: false,
-      onPopInvokedWithResult: (didPop, result) {
-        if (didPop) return;
-        final now = DateTime.now();
-        if (_lastBackPressTime == null || now.difference(_lastBackPressTime!) > const Duration(seconds: 2)) {
-          _lastBackPressTime = now;
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(isAr ? 'اضغط مرة أخرى للخروج' : 'Press back again to exit')));
-        } else { exit(0); }
-      },
-      child: Scaffold(
-        resizeToAvoidBottomInset: false, // هذا السطر يحل مشكلة الـ Pixel Overflow عند فتح الكيبورد
-        body: Stack(
-          children: [
-            Positioned.fill(child: body),
-            _buildCustomBottomNav(primaryGreen, gold, isAr),
-          ],
+    return AnnotatedRegion<ui.PlatformDispatcher>( // سياق لتحديث واجهة النظام
+      value: ui.PlatformDispatcher.instance,
+      child: PopScope(
+        canPop: false,
+        onPopInvokedWithResult: (didPop, result) {
+          if (didPop) return;
+          final now = DateTime.now();
+          if (_lastBackPressTime == null || now.difference(_lastBackPressTime!) > const Duration(seconds: 2)) {
+            _lastBackPressTime = now;
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(isAr ? 'اضغط مرة أخرى للخروج' : 'Press back again to exit')));
+          } else { exit(0); }
+        },
+        child: Scaffold(
+          resizeToAvoidBottomInset: false,
+          appBar: PreferredSize(
+            preferredSize: const Size.fromHeight(0), // شريط شفاف للتحكم في أيقونات النظام
+            child: AppBar(
+              elevation: 0,
+              backgroundColor: Colors.transparent,
+              systemOverlayStyle: isDark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
+            ),
+          ),
+          body: Stack(
+            children: [
+              Positioned.fill(child: body),
+              _buildCustomBottomNav(primaryGreen, gold, isAr),
+            ],
+          ),
         ),
       ),
     );
