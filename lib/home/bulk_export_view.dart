@@ -101,6 +101,7 @@ class _BulkExportViewState extends State<BulkExportView> {
         pdf.addPage(
           pw.Page(
             pageFormat: PdfPageFormat.a4,
+            textDirection: isAr ? pw.TextDirection.rtl : pw.TextDirection.ltr,
             build: (context) => pw.Center(
               child: pw.Container(
                 padding: const pw.EdgeInsets.all(20),

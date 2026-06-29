@@ -241,7 +241,7 @@ class _AddAnimalViewState extends State<AddAnimalView> {
                 mainAxisSize: pw.MainAxisSize.min,
                 children: [
                   pw.Text('QPet ID: ${pet['id']}', style: pw.TextStyle(fontSize: 14, font: fontBold)), 
-                  pw.SizedBox(height: 4), 
+                  pw.SizedBox(height: 2),
                   pw.Stack(
                     alignment: pw.Alignment.center,
                     children: [
@@ -278,35 +278,57 @@ class _AddAnimalViewState extends State<AddAnimalView> {
     final font = await PdfGoogleFonts.amiriRegular();
     final fontBold = await PdfGoogleFonts.amiriBold();
 
-    pdf.addPage(
-      pw.MultiPage(
-        pageFormat: PdfPageFormat.a4,
-        margin: const pw.EdgeInsets.all(30),
-        textDirection: isAr ? pw.TextDirection.rtl : pw.TextDirection.ltr,
-        build: (context) => [
-          pw.Header(
-            level: 0,
-            child: pw.Text(isAr ? 'ملف كلمات السر فقط' : 'Passwords Only Report', 
-              style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold, font: fontBold)),
+    for (var pet in _newlyCreatedPets) {
+      pdf.addPage(
+        pw.Page(
+          pageFormat: PdfPageFormat.a4,
+          textDirection: isAr ? pw.TextDirection.rtl : pw.TextDirection.ltr,
+          build: (context) => pw.Center(
+            child: pw.Container(
+              padding: const pw.EdgeInsets.all(20),
+              decoration: pw.BoxDecoration(
+                border: pw.Border.all(color: PdfColors.grey300, width: 0.5),
+                borderRadius: const pw.BorderRadius.all(pw.Radius.circular(15)),
+              ),
+              child: pw.Column(
+                mainAxisSize: pw.MainAxisSize.min,
+                children: [
+                  pw.Text(isAr ? 'بيانات تعديل الحساب' : 'Account Edit Details', style: pw.TextStyle(fontSize: 12, font: fontBold, color: PdfColors.teal)),
+                  pw.SizedBox(height: 20),
+                  pw.Container(
+                    padding: const pw.EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+                    decoration: pw.BoxDecoration(
+                      color: PdfColors.grey100,
+                      borderRadius: const pw.BorderRadius.all(pw.Radius.circular(10)),
+                    ),
+                    child: pw.Row(
+                      mainAxisSize: pw.MainAxisSize.min,
+                      children: [
+                        pw.Column(
+                          children: [
+                            pw.Text('ID', style: pw.TextStyle(fontSize: 10, font: font)),
+                            pw.Text('${pet['id']}', style: pw.TextStyle(fontSize: 16, font: fontBold)),
+                          ],
+                        ),
+                        pw.Container(width: 1, height: 30, color: PdfColors.grey300, margin: const pw.EdgeInsets.symmetric(horizontal: 20)),
+                        pw.Column(
+                          children: [
+                            pw.Text(isAr ? 'كلمة السر' : 'Password', style: pw.TextStyle(fontSize: 10, font: font)),
+                            pw.Text(pet['password'] ?? '---', style: pw.TextStyle(fontSize: 24, fontWeight: pw.FontWeight.bold, font: fontBold, letterSpacing: 3)),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  pw.SizedBox(height: 20),
+                  pw.Text('QPet Smart ID System', style: pw.TextStyle(fontSize: 8, font: font, color: PdfColors.grey600)),
+                ],
+              ),
+            ),
           ),
-          pw.SizedBox(height: 20),
-          pw.TableHelper.fromTextArray(
-            headerStyle: pw.TextStyle(font: fontBold, color: PdfColors.white),
-            headerDecoration: const pw.BoxDecoration(color: PdfColors.teal),
-            cellStyle: pw.TextStyle(font: font),
-            columnWidths: {
-              0: const pw.FlexColumnWidth(1),
-              1: const pw.FlexColumnWidth(2),
-            },
-            headers: isAr ? ['المعرف (ID)', 'كلمة السر'] : ['Pet ID', 'Password'],
-            data: _newlyCreatedPets.map((pet) => [
-              pet['id'].toString(),
-              pet['password'].toString(),
-            ]).toList(),
-          ),
-        ],
-      ),
-    );
+        ),
+      );
+    }
     await Printing.layoutPdf(onLayout: (format) async => pdf.save(), name: isAr ? 'كلمات_السر' : 'Passwords');
   }
 }
