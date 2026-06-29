@@ -41,7 +41,7 @@ void main() async {
     'sb_publishable_EDi7VysIXSiZhnpjJjYOGQ_Vgop7WUd',
   );
 
-  String language = _prefs?.getString('language') ?? 'ar';
+  String language = _prefs?.getString('language') ?? 'en';
   int colorValue = _prefs?.getInt('themeColor') ?? const Color(0xFFFDF9F5).value;
 
   String? initialPetId;
