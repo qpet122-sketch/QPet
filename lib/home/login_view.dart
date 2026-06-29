@@ -150,6 +150,7 @@ class _LoginViewState extends State<LoginView> {
                             TextFormField(
                               controller: _nameController,
                               style: TextStyle(color: textColor),
+                              mouseCursor: SystemMouseCursors.text, // إضافة المؤشر للويب
                               decoration: InputDecoration(
                                 labelText: isAr ? 'الاسم الكامل' : 'Full Name',
                                 labelStyle: const TextStyle(color: Colors.grey),
@@ -164,6 +165,7 @@ class _LoginViewState extends State<LoginView> {
                           TextFormField(
                             controller: _emailController,
                             style: TextStyle(color: textColor),
+                            mouseCursor: SystemMouseCursors.text, // إضافة المؤشر للويب
                             decoration: InputDecoration(
                               labelText: isAr ? 'البريد الإلكتروني' : 'Email',
                               labelStyle: const TextStyle(color: Colors.grey),
@@ -178,6 +180,7 @@ class _LoginViewState extends State<LoginView> {
                             controller: _passwordController,
                             obscureText: _obscurePassword,
                             style: TextStyle(color: textColor),
+                            mouseCursor: SystemMouseCursors.text, // إضافة المؤشر للويب
                             decoration: InputDecoration(
                               labelText: isAr ? 'كلمة المرور' : 'Password',
                               labelStyle: const TextStyle(color: Colors.grey),
