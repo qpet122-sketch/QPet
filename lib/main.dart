@@ -11,7 +11,6 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'home/no_internet_view.dart';
-
 import 'home/splash_screen.dart';
 
 late SupabaseClient supabase;
@@ -41,6 +40,7 @@ void main() async {
     'sb_publishable_EDi7VysIXSiZhnpjJjYOGQ_Vgop7WUd',
   );
 
+  // اللغة الافتراضية إنجليزية
   String language = _prefs?.getString('language') ?? 'en';
   int colorValue = _prefs?.getInt('themeColor') ?? const Color(0xFFFDF9F5).value;
 
@@ -119,10 +119,6 @@ class _MyAppState extends State<MyApp> {
           surface: isDark ? const Color(0xFF1E1E1E) : Colors.white,
         ),
         useMaterial3: true,
-        textTheme: TextTheme(
-          bodyLarge: TextStyle(color: isDark ? Colors.white : Colors.black87),
-          bodyMedium: TextStyle(color: isDark ? Colors.white70 : Colors.black54),
-        ),
       ),
       builder: (context, child) {
         return ConnectivityWrapper(child: child!);
@@ -157,7 +153,7 @@ class PublicPetProfilePage extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 8),
             child: ElevatedButton.icon(
               onPressed: onOpenApp,
-              icon: const Icon(Icons.open_in_new, size: 18),
+              icon: const Icon(Icons.apps_rounded, size: 18),
               label: Text(isAr ? 'فتح التطبيق' : 'Open App'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: royalGold, 
@@ -214,12 +210,11 @@ class PublicPetProfilePage extends StatelessWidget {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                             decoration: BoxDecoration(color: primaryGreen, borderRadius: BorderRadius.circular(20)),
-                            child: Text('Smart ID System', style: TextStyle(color: royalGold, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
+                            child: const Text('Smart ID System', style: TextStyle(color: royalGold, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
                           ),
                         ],
                       ),
                     ),
-                    
                     Padding(
                       padding: const EdgeInsets.fromLTRB(32, 0, 32, 32),
                       child: Column(
@@ -230,30 +225,24 @@ class PublicPetProfilePage extends StatelessWidget {
                             '${data['animalType'] ?? ''}${data['animalBreed'] != null && data['animalBreed'].toString().isNotEmpty ? ' - ${data['animalBreed']}' : ''}', 
                             style: const TextStyle(fontSize: 18, color: royalGold, fontWeight: FontWeight.w500)
                           ),
-                          
                           const SizedBox(height: 30),
                           _buildSectionTitle(isAr ? 'البيانات الأساسية' : 'Basic Information', royalGold),
                           _info(isAr ? 'الجنس' : 'Gender', data['gender'], Icons.transgender, royalGold),
                           _info(isAr ? 'معقم / مخصي' : 'Neutered/Spayed', data['sterilizationStatus'], Icons.content_cut, royalGold),
-                          
                           const SizedBox(height: 25),
                           _buildSectionTitle(isAr ? 'بيانات المالك' : 'Owner Details', royalGold),
                           _info(isAr ? 'الاسم' : 'Owner', data['ownerName'], Icons.person_outline, royalGold),
-                          
                           if (ownerUid != null)
                             StreamBuilder<DocumentSnapshot>(
                               stream: FirebaseFirestore.instance.collection('users').doc(ownerUid).snapshots(),
                               builder: (context, userSnapshot) {
                                 if (!userSnapshot.hasData || !userSnapshot.data!.exists) return const SizedBox.shrink();
                                 final userData = userSnapshot.data!.data() as Map<String, dynamic>;
-                                
                                 bool hasFacebook = userData['facebook'] != null && userData['facebook'].toString().isNotEmpty;
                                 bool hasInstagram = userData['instagram'] != null && userData['instagram'].toString().isNotEmpty;
                                 bool hasTelegram = userData['telegram'] != null && userData['telegram'].toString().isNotEmpty;
                                 bool hasWhatsapp = userData['whatsapp'] != null && userData['whatsapp'].toString().isNotEmpty;
-
                                 if (!hasFacebook && !hasInstagram && !hasTelegram && !hasWhatsapp) return const SizedBox.shrink();
-
                                 return Padding(
                                   padding: const EdgeInsets.symmetric(vertical: 10),
                                   child: Row(
@@ -271,7 +260,6 @@ class PublicPetProfilePage extends StatelessWidget {
                                 );
                               },
                             ),
-
                           _info(isAr ? 'رقم التواصل' : 'Contact', data['ownerPhone'], Icons.phone_android_outlined, royalGold),
                           const SizedBox(height: 20),
                           if (data['ownerPhone'] != null && data['ownerPhone'].toString().isNotEmpty) 
@@ -288,20 +276,16 @@ class PublicPetProfilePage extends StatelessWidget {
                                 shadowColor: Colors.green.withOpacity(0.3),
                               ),
                             ),
-                          
                           const SizedBox(height: 35),
                           _buildSectionTitle(isAr ? 'السجل الطبي' : 'Medical Record', royalGold),
                           _medInfo(isAr ? 'الوزن' : 'Weight', '${data['weight'] ?? '--'} kg'),
                           _medInfo(isAr ? 'العمر' : 'Age', data['age']),
-
                           _buildMedicalList(isAr ? 'التطعيمات' : 'Vaccinations', data['vaccinations_list'], (item) => '${item['type']} (${item['date']})${item['next'] != '' ? ' -> ${isAr ? 'القادمة' : 'Next'}: ${item['next']}' : ''}'),
                           _buildMedicalList(isAr ? 'العمليات الجراحية' : 'Surgeries', data['surgeries_list'], (item) => '${item['name']} (${item['date']})'),
                           _buildMedicalList(isAr ? 'الأدوية الحالية' : 'Current Medications', data['medications_list'], (item) => '${item['name']} - ${item['duration']}'),
                           _buildMedicalList(isAr ? 'جرعات الديدان' : 'Deworming Doses', data['deworming_list'], (item) => '${item['name']} (${item['date']})'),
-                          
                           _buildSimpleMedicalList(isAr ? 'سجل الحساسية' : 'Allergies', data['allergies_list']),
                           _buildSimpleMedicalList(isAr ? 'الأمراض المزمنة' : 'Chronic Diseases', data['chronic_diseases_list']),
-                          
                           const SizedBox(height: 50),
                           const Divider(),
                           const SizedBox(height: 15),
