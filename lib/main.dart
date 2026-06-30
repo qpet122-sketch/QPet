@@ -381,11 +381,14 @@ class PublicPetProfilePage extends StatelessWidget {
       child: CircleAvatar(
         radius: 22, 
         backgroundColor: color.withOpacity(0.1), 
-        child: isWhatsApp 
-          ? SvgPicture.asset('assets/WhatsApp.svg', width: 24, height: 24)
-          : (imagePath != null 
-              ? Image.asset(imagePath, width: 24, height: 24)
-              : Icon(icon, color: color, size: 24))
+        child: Padding(
+          padding: const EdgeInsets.all(8.0), // إضافة Padding لتحسين شكل الصورة
+          child: isWhatsApp 
+            ? SvgPicture.asset('assets/WhatsApp.svg')
+            : (imagePath != null 
+                ? Image.asset(imagePath, fit: BoxFit.contain)
+                : Icon(icon, color: color, size: 24)),
+        )
       ),
     );
   }

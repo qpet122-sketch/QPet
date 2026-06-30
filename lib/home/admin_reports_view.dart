@@ -179,14 +179,23 @@ class _AdminReportsViewState extends State<AdminReportsView> with SingleTickerPr
                       SizedBox(
                         width: 180, 
                         height: 180, 
-                        child: QrImageView(
-                          data: url, 
-                          version: QrVersions.auto, 
-                          embeddedImage: const AssetImage('assets/final_logo-Photoroom.png'),
-                          embeddedImageStyle: const QrEmbeddedImageStyle(size: Size(45, 45)),
-                          errorCorrectionLevel: QrErrorCorrectLevel.H,
-                          eyeStyle: QrEyeStyle(eyeShape: QrEyeShape.square, color: primaryColor),
-                          dataModuleStyle: QrDataModuleStyle(dataModuleShape: QrDataModuleShape.square, color: primaryColor),
+                        child: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            QrImageView(
+                              data: url, 
+                              version: QrVersions.auto, 
+                              errorCorrectionLevel: QrErrorCorrectLevel.H,
+                              eyeStyle: QrEyeStyle(eyeShape: QrEyeShape.square, color: primaryColor),
+                              dataModuleStyle: QrDataModuleStyle(dataModuleShape: QrDataModuleShape.square, color: primaryColor),
+                            ),
+                            Container(
+                              width: 40, height: 40,
+                              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8)),
+                              padding: const EdgeInsets.all(2),
+                              child: Image.asset('assets/final_logo-Photoroom.png', fit: BoxFit.contain),
+                            ),
+                          ],
                         )
                       ),
                       const SizedBox(height: 10),

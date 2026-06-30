@@ -589,7 +589,48 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _showDownloadQr() {
     const downloadUrl = 'https://drive.google.com/file/d/1D1zcqoLgvFiJjJ54vQrYEKWtFQWFlGav/view?usp=sharing';
-    showDialog(context: context, builder: (context) => AlertDialog(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)), title: const Center(child: Text('QPet App')), content: SizedBox(width: double.maxFinite, child: Column(mainAxisSize: MainAxisSize.min, children: [RepaintBoundary(key: _appQrKey, child: Container(color: Colors.white, padding: const EdgeInsets.all(10), child: QrImageView(data: downloadUrl, size: 200, embeddedImage: const AssetImage('assets/final_logo-Photoroom.png'), embeddedImageStyle: const QrEmbeddedImageStyle(size: Size(45, 45)), errorCorrectionLevel: QrErrorCorrectLevel.H))), const SizedBox(height: 20), ElevatedButton.icon(onPressed: _shareAppQr, icon: const Icon(Icons.share), label: const Text('مشاركة الرابط'), style: ElevatedButton.styleFrom(backgroundColor: Theme.of(context).primaryColor, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))))]))));
+    showDialog(
+      context: context, 
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)), 
+        title: const Center(child: Text('QPet App')), 
+        content: SizedBox(
+          width: double.maxFinite, 
+          child: Column(
+            mainAxisSize: MainAxisSize.min, 
+            children: [
+              RepaintBoundary(
+                key: _appQrKey, 
+                child: Container(
+                  color: Colors.white, 
+                  padding: const EdgeInsets.all(10), 
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      QrImageView(
+                        data: downloadUrl, 
+                        size: 200, 
+                        errorCorrectionLevel: QrErrorCorrectLevel.H,
+                        eyeStyle: const QrEyeStyle(eyeShape: QrEyeShape.square, color: Colors.teal),
+                        dataModuleStyle: const QrDataModuleStyle(dataModuleShape: QrDataModuleShape.square, color: Colors.teal),
+                      ),
+                      Container(
+                        width: 44, height: 44,
+                        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8)),
+                        padding: const EdgeInsets.all(2),
+                        child: Image.asset('assets/final_logo-Photoroom.png', fit: BoxFit.contain),
+                      ),
+                    ],
+                  )
+                )
+              ), 
+              const SizedBox(height: 20), 
+              ElevatedButton.icon(onPressed: _shareAppQr, icon: const Icon(Icons.share), label: const Text('مشاركة الرابط'), style: ElevatedButton.styleFrom(backgroundColor: Theme.of(context).primaryColor, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))))
+            ]
+          )
+        )
+      )
+    );
   }
 
   Future<void> _shareAppQr() async {
@@ -629,14 +670,23 @@ class _HomeScreenState extends State<HomeScreen> {
                     SizedBox(
                       width: 200, 
                       height: 200, 
-                      child: QrImageView(
-                        data: url, 
-                        version: QrVersions.auto, 
-                        embeddedImage: const AssetImage('assets/final_logo-Photoroom.png'),
-                        embeddedImageStyle: const QrEmbeddedImageStyle(size: Size(45, 45)),
-                        errorCorrectionLevel: QrErrorCorrectLevel.H,
-                        eyeStyle: QrEyeStyle(eyeShape: QrEyeShape.square, color: primaryColor),
-                        dataModuleStyle: QrDataModuleStyle(dataModuleShape: QrDataModuleShape.square, color: primaryColor),
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          QrImageView(
+                            data: url, 
+                            version: QrVersions.auto, 
+                            errorCorrectionLevel: QrErrorCorrectLevel.H,
+                            eyeStyle: QrEyeStyle(eyeShape: QrEyeShape.square, color: primaryColor),
+                            dataModuleStyle: QrDataModuleStyle(dataModuleShape: QrDataModuleShape.square, color: primaryColor),
+                          ),
+                          Container(
+                            width: 44, height: 44,
+                            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8)),
+                            padding: const EdgeInsets.all(2),
+                            child: Image.asset('assets/final_logo-Photoroom.png', fit: BoxFit.contain),
+                          ),
+                        ],
                       )
                     ),
                     const SizedBox(height: 10),
