@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart'; // إضافة الاستيراد المفقود
@@ -638,11 +639,23 @@ class _HomeScreenState extends State<HomeScreen> {
       RenderRepaintBoundary boundary = _appQrKey.currentContext!.findRenderObject() as RenderRepaintBoundary;
       ui.Image image = await boundary.toImage(pixelRatio: 3.0);
       ByteData? byteData = await image.toByteData(format: ui.ImageByteFormat.png);
-      final directory = await getTemporaryDirectory();
-      final imagePath = await File('${directory.path}/app_qr.png').create();
-      await imagePath.writeAsBytes(byteData!.buffer.asUint8List());
-      await Share.shareXFiles([XFile(imagePath.path)], text: 'حمل تطبيق QPet من هنا');
-    } catch (e) {}
+      final Uint8List pngBytes = byteData!.buffer.asUint8List();
+
+      if (kIsWeb) {
+        // في الويب نقوم بتحميل الصورة مباشرة
+        await Share.shareXFiles(
+          [XFile.fromData(pngBytes, name: 'app_qr.png', mimeType: 'image/png')],
+          text: 'حمل تطبيق QPet من هنا',
+        );
+      } else {
+        final directory = await getTemporaryDirectory();
+        final imagePath = await File('${directory.path}/app_qr.png').create();
+        await imagePath.writeAsBytes(pngBytes);
+        await Share.shareXFiles([XFile(imagePath.path)], text: 'حمل تطبيق QPet من هنا');
+      }
+    } catch (e) {
+      debugPrint("Error sharing App QR: $e");
+    }
   }
 
   void _showPetQr(String petId, Map<String, dynamic> pet, bool isAr, Color primaryColor) {
@@ -717,13 +730,25 @@ class _HomeScreenState extends State<HomeScreen> {
       RenderRepaintBoundary boundary = _petQrKey.currentContext!.findRenderObject() as RenderRepaintBoundary;
       ui.Image image = await boundary.toImage(pixelRatio: 3.0);
       ByteData? byteData = await image.toByteData(format: ui.ImageByteFormat.png);
-      final directory = await getTemporaryDirectory();
-      final imagePath = await File('${directory.path}/pet_qr.png').create();
-      await imagePath.writeAsBytes(byteData!.buffer.asUint8List());
-      await Share.shareXFiles(
-        [XFile(imagePath.path)], 
-        text: 'QPet - بيانات الأليف: $name\nكلمة سر التعديل: $password'
-      );
-    } catch (e) {}
+      final Uint8List pngBytes = byteData!.buffer.asUint8List();
+
+      if (kIsWeb) {
+        // في الويب نقوم بتحميل الصورة مباشرة
+        await Share.shareXFiles(
+          [XFile.fromData(pngBytes, name: 'pet_qr.png', mimeType: 'image/png')],
+          text: 'QPet - بيانات الأليف: $name\nكلمة سر التعديل: $password',
+        );
+      } else {
+        final directory = await getTemporaryDirectory();
+        final imagePath = await File('${directory.path}/pet_qr.png').create();
+        await imagePath.writeAsBytes(pngBytes);
+        await Share.shareXFiles(
+          [XFile(imagePath.path)], 
+          text: 'QPet - بيانات الأليف: $name\nكلمة سر التعديل: $password'
+        );
+      }
+    } catch (e) {
+      debugPrint("Error sharing Pet QR: $e");
+    }
   }
 }

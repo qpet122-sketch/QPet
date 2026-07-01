@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
@@ -145,12 +146,23 @@ class _AdminReportsViewState extends State<AdminReportsView> with SingleTickerPr
       RenderRepaintBoundary boundary = _qrKey.currentContext!.findRenderObject() as RenderRepaintBoundary;
       ui.Image image = await boundary.toImage(pixelRatio: 3.0);
       ByteData? byteData = await image.toByteData(format: ui.ImageByteFormat.png);
-      Uint8List pngBytes = byteData!.buffer.asUint8List();
-      final directory = await getTemporaryDirectory();
-      final imagePath = await File('${directory.path}/qr_code.png').create();
-      await imagePath.writeAsBytes(pngBytes);
-      await Share.shareXFiles([XFile(imagePath.path)], text: 'QPet - بيانات الأليف: $name\nكلمة سر التعديل: $password');
-    } catch (e) {}
+      final Uint8List pngBytes = byteData!.buffer.asUint8List();
+
+      if (kIsWeb) {
+        // في الويب نقوم بالتحميل/المشاركة باستخدام البيانات مباشرة
+        await Share.shareXFiles(
+          [XFile.fromData(pngBytes, name: 'qr_code.png', mimeType: 'image/png')],
+          text: 'QPet - بيانات الأليف: $name\nكلمة سر التعديل: $password',
+        );
+      } else {
+        final directory = await getTemporaryDirectory();
+        final imagePath = await File('${directory.path}/qr_code.png').create();
+        await imagePath.writeAsBytes(pngBytes);
+        await Share.shareXFiles([XFile(imagePath.path)], text: 'QPet - بيانات الأليف: $name\nكلمة سر التعديل: $password');
+      }
+    } catch (e) {
+      debugPrint("Error sharing QR code: $e");
+    }
   }
 
   void _showPetQr(String petId, Map<String, dynamic> pet, bool isAr, Color primaryColor, bool isDark) {

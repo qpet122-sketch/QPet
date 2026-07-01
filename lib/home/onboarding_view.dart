@@ -36,7 +36,7 @@ class _OnboardingViewState extends State<OnboardingView> {
       titleEn: 'Smart Digital Identity',
       descAr: 'أنشئ بروفايل رقمي لأليفك مع كود QR لسهولة التعرف عليه والوصول لبياناته.',
       descEn: 'Create a digital profile for your pet with a QR code for easy identification.',
-      image: 'assets/onboarding3.jpg',
+      image: 'assets/onboarding3.png',
     ),
   ];
 
