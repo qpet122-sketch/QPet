@@ -40,25 +40,43 @@ class _HomeScreenState extends State<HomeScreen> {
   int petCount = 0;
   List<Map<String, dynamic>> petsData = [];
   List<String> userPetIds = [];
+  String appDownloadUrl = 'https://drive.google.com/file/d/1D1zcqoLgvFiJjJ54vQrYEKWtFQWFlGav/view?usp=sharing';
   final GlobalKey _appQrKey = GlobalKey();
   final GlobalKey _petQrKey = GlobalKey();
   DateTime? _lastBackPressTime;
   StreamSubscription? _notificationSubscription;
   StreamSubscription? _userCountSubscription;
   StreamSubscription? _petCountSubscription;
+  StreamSubscription? _configSubscription; // مراقب الإعدادات
 
   @override
   void dispose() {
     _notificationSubscription?.cancel();
     _userCountSubscription?.cancel();
     _petCountSubscription?.cancel();
+    _configSubscription?.cancel(); // إلغاء المراقبة
     super.dispose();
   }
 
   @override
   void initState() {
     super.initState();
+    _listenToAppConfig(); // البدء بالمراقبة اللحظية
     _fetchInitialData();
+  }
+
+  void _listenToAppConfig() {
+    _configSubscription = FirebaseFirestore.instance
+        .collection('config')
+        .doc('contact_info')
+        .snapshots()
+        .listen((doc) {
+      if (doc.exists && mounted) {
+        setState(() {
+          appDownloadUrl = doc.data()?['appDownloadUrl'] ?? appDownloadUrl;
+        });
+      }
+    });
   }
 
   Future<void> _fetchInitialData() async {
@@ -589,7 +607,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _showDownloadQr() {
-    const downloadUrl = 'https://drive.google.com/file/d/1D1zcqoLgvFiJjJ54vQrYEKWtFQWFlGav/view?usp=sharing';
     showDialog(
       context: context, 
       builder: (context) => AlertDialog(
@@ -609,7 +626,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     alignment: Alignment.center,
                     children: [
                       QrImageView(
-                        data: downloadUrl, 
+                        data: appDownloadUrl, 
                         size: 200, 
                         errorCorrectionLevel: QrErrorCorrectLevel.H,
                         eyeStyle: const QrEyeStyle(eyeShape: QrEyeShape.square, color: Colors.black),
@@ -645,13 +662,13 @@ class _HomeScreenState extends State<HomeScreen> {
         // في الويب نقوم بتحميل الصورة مباشرة
         await Share.shareXFiles(
           [XFile.fromData(pngBytes, name: 'app_qr.png', mimeType: 'image/png')],
-          text: 'حمل تطبيق QPet من هنا',
+          text: 'حمل تطبيق QPet من هنا: $appDownloadUrl',
         );
       } else {
         final directory = await getTemporaryDirectory();
         final imagePath = await File('${directory.path}/app_qr.png').create();
         await imagePath.writeAsBytes(pngBytes);
-        await Share.shareXFiles([XFile(imagePath.path)], text: 'حمل تطبيق QPet من هنا');
+        await Share.shareXFiles([XFile(imagePath.path)], text: 'حمل تطبيق QPet من هنا: $appDownloadUrl');
       }
     } catch (e) {
       debugPrint("Error sharing App QR: $e");

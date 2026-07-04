@@ -101,9 +101,9 @@ class _SettingsViewState extends State<SettingsView> {
           ),
           ElevatedButton(
             onPressed: () async {
-              await FirebaseFirestore.instance.collection('config').doc('contact_info').update({
+              await FirebaseFirestore.instance.collection('config').doc('contact_info').set({
                 'defaultShippingPrice': int.tryParse(shippingController.text) ?? 0,
-              });
+              }, SetOptions(merge: true));
               _initializeData();
               if (mounted) Navigator.pop(context);
             },
@@ -472,6 +472,8 @@ class _SettingsViewState extends State<SettingsView> {
   void _showEditContactDialog(bool isAr, bool isDark) {
     final waController = TextEditingController(text: clinicContact?['whatsapp'] ?? '+201000527852');
     final fbController = TextEditingController(text: clinicContact?['facebook'] ?? 'https://www.facebook.com/profile.php?id=61591325165355');
+    final downloadController = TextEditingController(text: clinicContact?['appDownloadUrl'] ?? 'https://drive.google.com/file/d/1D1zcqoLgvFiJjJ54vQrYEKWtFQWFlGav/view?usp=sharing');
+    final versionController = TextEditingController(text: clinicContact?['latestVersion'] ?? '1.0.0');
     Color gold = const Color(0xFFC5A059);
     Color primaryColor = Theme.of(context).primaryColor;
 
@@ -491,6 +493,10 @@ class _SettingsViewState extends State<SettingsView> {
               _buildContactField(waController, isAr ? 'رقم الواتساب' : 'WhatsApp Number', Icons.phone, isDark, gold, primaryColor, Colors.green),
               const SizedBox(height: 16),
               _buildContactField(fbController, isAr ? 'رابط الفيسبوك' : 'Facebook Link', Icons.facebook, isDark, gold, primaryColor, Colors.blueAccent),
+              const SizedBox(height: 16),
+              _buildContactField(downloadController, isAr ? 'رابط تحميل التطبيق' : 'App Download Link', Icons.download_rounded, isDark, gold, primaryColor, Colors.orange),
+              const SizedBox(height: 16),
+              _buildContactField(versionController, isAr ? 'رقم أحدث إصدار' : 'Latest Version Number', Icons.numbers, isDark, gold, primaryColor, Colors.blue),
             ],
           ),
         ),
@@ -504,7 +510,9 @@ class _SettingsViewState extends State<SettingsView> {
               await FirebaseFirestore.instance.collection('config').doc('contact_info').set({
                 'whatsapp': waController.text.trim(),
                 'facebook': fbController.text.trim(),
-              });
+                'appDownloadUrl': downloadController.text.trim(),
+                'latestVersion': versionController.text.trim(),
+              }, SetOptions(merge: true));
               _fetchClinicContact();
               if (mounted) Navigator.pop(context);
             },

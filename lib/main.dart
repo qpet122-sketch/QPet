@@ -23,7 +23,7 @@ void main() async {
     await Firebase.initializeApp(
       options: const FirebaseOptions(
         apiKey: "AIzaSyBfPupEnaEgFK7tYX6OswPXfYBjgRyiu3Y",
-        appId: "1:582369930164:web:8e1bf78f71120cdc4fa0e1",
+        appId: "1:582369930164:web:19cce1238f4c65954fa0e1",
         messagingSenderId: "582369930164",
         projectId: "qpet-edcb0",
         storageBucket: "qpet-edcb0.firebasestorage.app",
