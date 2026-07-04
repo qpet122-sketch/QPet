@@ -166,7 +166,7 @@ class _AdminReportsViewState extends State<AdminReportsView> with SingleTickerPr
   }
 
   void _showPetQr(String petId, Map<String, dynamic> pet, bool isAr, Color primaryColor, bool isDark) {
-    final url = 'https://mohamedyasser37.github.io/qpet1/#/pet/$petId';
+    final url = 'https://qpet122-sketch.github.io/QPet/#/pet/$petId';
     final name = pet['animalName'] ?? '';
     final password = pet['editPassword'] ?? '';
     showDialog(

@@ -191,7 +191,7 @@ class _AddAnimalViewState extends State<AddAnimalView> {
         results.add({
           'id': petIdStr,
           'password': password,
-          'url': 'https://mohamedyasser37.github.io/qpet1/#/pet/$petIdStr'
+          'url': 'https://qpet122-sketch.github.io/QPet/#/pet/$petIdStr'
         });
       }
 

@@ -21,7 +21,7 @@ class _BulkExportViewState extends State<BulkExportView> {
     return querySnapshot.docs.map((doc) {
       final data = doc.data();
       data['id'] = doc.id;
-      data['url'] = 'https://mohamedyasser37.github.io/qpet1/#/pet/${doc.id}';
+      data['url'] = 'https://qpet122-sketch.github.io/QPet/#/pet/${doc.id}';
       return data;
     }).toList();
   }
