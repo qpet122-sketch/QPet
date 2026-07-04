@@ -211,7 +211,15 @@ class _HomeScreenState extends State<HomeScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               _circleButton(Icons.notifications_none, green, () => Navigator.push(context, MaterialPageRoute(builder: (_) => const OrdersListView()))),
-              Image.asset('assets/final_logo-Photoroom.png', height: 40),
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: isDark ? Colors.white : Colors.transparent,
+                  shape: BoxShape.circle,
+                  boxShadow: isDark ? [BoxShadow(color: Colors.white.withOpacity(0.1), blurRadius: 10)] : null,
+                ),
+                child: Image.asset('assets/final_logo-Photoroom.png', height: 35),
+              ),
               _circleButton(Icons.share_outlined, Colors.grey, _showDownloadQr),
             ],
           ),
@@ -223,7 +231,7 @@ class _HomeScreenState extends State<HomeScreen> {
           _buildHeroCard(green, gold, isAr),
           
           const SizedBox(height: 30),
-          _buildSectionHeader(isAr ? 'خدمات QPet 🐾' : 'QPet Services 🐾', gold),
+          _buildSectionHeader(isAr ? 'خدمات QPet 🐾' : 'QPet Services 🐾', gold, isDark),
           const SizedBox(height: 15),
           
           _buildMenuCard(isAr ? 'متجر المستلزمات' : 'Pet Shop', isAr ? 'تسوق أفضل المنتجات' : 'Shop premium products', Icons.storefront, Colors.orange, () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ProductsView())), isDark, gold),
@@ -232,7 +240,7 @@ class _HomeScreenState extends State<HomeScreen> {
           
           if (userRole == 'doctor') ...[
             const SizedBox(height: 30),
-            _buildSectionHeader(isAr ? 'لوحة الإدارة' : 'Admin Dashboard', gold),
+            _buildSectionHeader(isAr ? 'لوحة الإدارة' : 'Admin Dashboard', gold, isDark),
             const SizedBox(height: 15),
             Row(children: [
               _buildStatBox(isAr ? 'المستخدمين' : 'Users', userCount, Icons.people_outline, Colors.blue, isDark),
@@ -398,7 +406,7 @@ class _HomeScreenState extends State<HomeScreen> {
               
               if (pet['weight'] != null || pet['age'] != null) ...[
                 const Divider(height: 50),
-                _buildSectionHeader(isAr ? 'السجل الطبي' : 'Medical Record', gold),
+                _buildSectionHeader(isAr ? 'السجل الطبي' : 'Medical Record', gold, isDark),
                 const SizedBox(height: 20),
                 _petInfoRow(Icons.monitor_weight_outlined, isAr ? 'الوزن:' : 'Weight:', '${pet['weight'] ?? '--'} kg', isDark),
                 _petInfoRow(Icons.calendar_today_outlined, isAr ? 'العمر:' : 'Age:', pet['age'], isDark),
@@ -485,10 +493,10 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildSectionHeader(String title, Color gold) {
+  Widget _buildSectionHeader(String title, Color gold, bool isDark) {
     return Row(
       children: [
-        Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        Text(title, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: isDark ? Colors.white : Colors.black87)),
         const SizedBox(width: 10),
         Expanded(child: Container(height: 1, decoration: BoxDecoration(gradient: LinearGradient(colors: [gold.withOpacity(0.5), Colors.transparent])))),
       ],

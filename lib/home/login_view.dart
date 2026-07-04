@@ -295,7 +295,16 @@ class _LoginViewState extends State<LoginView> {
                               enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide(color: isDark ? Colors.white12 : Colors.grey.shade300)),
                               focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide(color: actionColor, width: 1.5)),
                             ),
-                            validator: (v) => v!.isEmpty || !v.contains('@') ? (isAr ? 'بريد غير صالح' : 'Invalid Email') : null,
+                            validator: (value) {
+                              if (value == null || value.trim().isEmpty) {
+                                return isAr ? "أدخل البريد الإلكتروني" : "Enter email";
+                              }
+                              final emailRegExp = RegExp(r'^[^@]+@[^@]+\.[^@]+$');
+                              if (!emailRegExp.hasMatch(value.trim())) {
+                                return isAr ? "بريد إلكتروني غير صالح" : "Invalid email";
+                              }
+                              return null;
+                            },
                           ),
                           const SizedBox(height: 16),
                           TextFormField(
@@ -314,7 +323,15 @@ class _LoginViewState extends State<LoginView> {
                               enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide(color: isDark ? Colors.white12 : Colors.grey.shade300)),
                               focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide(color: actionColor, width: 1.5)),
                             ),
-                            validator: (v) => v!.length < 6 ? (isAr ? 'كلمة المرور قصيرة' : 'Password too short') : null,
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return isAr ? "أدخل كلمة المرور" : "Enter password";
+                              }
+                              if (value.length < 6) {
+                                return isAr ? "كلمة المرور يجب أن تكون 6 أحرف على الأقل" : "Password must be at least 6 characters";
+                              }
+                              return null;
+                            },
                           ),
                           if (isLogin)
                             Align(

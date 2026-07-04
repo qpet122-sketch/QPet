@@ -494,7 +494,7 @@ class _SettingsViewState extends State<SettingsView> {
               const SizedBox(height: 16),
               _buildContactField(fbController, isAr ? 'رابط الفيسبوك' : 'Facebook Link', Icons.facebook, isDark, gold, primaryColor, Colors.blueAccent),
               const SizedBox(height: 16),
-              _buildContactField(downloadController, isAr ? 'رابط تحميل التطبيق' : 'App Download Link', Icons.download_rounded, isDark, gold, primaryColor, Colors.orange),
+              _buildContactField(downloadController, isAr ? 'رابط تحميل التطبيق' : 'App Download Link', Icons.download_rounded, isDark, gold, primaryColor, Colors.orange, maxLines: 3),
               const SizedBox(height: 16),
               _buildContactField(versionController, isAr ? 'رقم أحدث إصدار' : 'Latest Version Number', Icons.numbers, isDark, gold, primaryColor, Colors.blue),
             ],
@@ -528,10 +528,11 @@ class _SettingsViewState extends State<SettingsView> {
     );
   }
 
-  Widget _buildContactField(TextEditingController controller, String label, IconData icon, bool isDark, Color gold, Color primary, Color iconColor, {TextInputType? keyboardType}) {
+  Widget _buildContactField(TextEditingController controller, String label, IconData icon, bool isDark, Color gold, Color primary, Color iconColor, {TextInputType? keyboardType, int maxLines = 1}) {
     return TextField(
       controller: controller,
       keyboardType: keyboardType,
+      maxLines: maxLines,
       style: TextStyle(color: isDark ? Colors.white : Colors.black87),
       decoration: InputDecoration(
         labelText: label,
