@@ -214,9 +214,14 @@ class _HomeScreenState extends State<HomeScreen> {
               Container(
                 padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
-                  color: isDark ? Colors.white : Colors.transparent,
+                  color: Colors.white,
                   shape: BoxShape.circle,
-                  boxShadow: isDark ? [BoxShadow(color: Colors.white.withOpacity(0.1), blurRadius: 10)] : null,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05), 
+                      blurRadius: 10,
+                    )
+                  ],
                 ),
                 child: Image.asset('assets/final_logo-Photoroom.png', height: 35),
               ),
