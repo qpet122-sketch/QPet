@@ -45,8 +45,15 @@ void main() async {
   int colorValue = _prefs?.getInt('themeColor') ?? const Color(0xFFFDF9F5).value;
 
   String? initialPetId;
+  String? redirectDownload;
+
   if (kIsWeb) {
     final uri = Uri.base;
+    // التحقق من طلب التحميل
+    if (uri.fragment == '/download' || uri.path.endsWith('/download')) {
+      redirectDownload = 'pending';
+    }
+
     if (uri.fragment.contains('/pet/')) {
       initialPetId = uri.fragment.split('/pet/').last;
     } else if (uri.path.contains('/pet/')) {
@@ -61,6 +68,7 @@ void main() async {
     initialLocale: Locale(language),
     initialColor: Color(colorValue),
     startPetId: initialPetId,
+    shouldRedirectDownload: redirectDownload != null,
   ));
 }
 
@@ -68,8 +76,15 @@ class MyApp extends StatefulWidget {
   final Locale initialLocale;
   final Color initialColor;
   final String? startPetId;
+  final bool shouldRedirectDownload;
 
-  const MyApp({super.key, required this.initialLocale, required this.initialColor, this.startPetId});
+  const MyApp({
+    super.key, 
+    required this.initialLocale, 
+    required this.initialColor, 
+    this.startPetId,
+    this.shouldRedirectDownload = false,
+  });
 
   @override
   State<MyApp> createState() => _MyAppState();
@@ -82,6 +97,7 @@ class _MyAppState extends State<MyApp> {
   late Locale locale;
   late Color themeColor;
   bool showPublicProfile = false;
+  bool isRedirecting = false;
 
   @override
   void initState() {
@@ -89,6 +105,27 @@ class _MyAppState extends State<MyApp> {
     locale = widget.initialLocale;
     themeColor = widget.initialColor;
     showPublicProfile = widget.startPetId != null;
+
+    if (widget.shouldRedirectDownload) {
+      _handleDownloadRedirect();
+    }
+  }
+
+  Future<void> _handleDownloadRedirect() async {
+    setState(() => isRedirecting = true);
+    try {
+      final doc = await FirebaseFirestore.instance.collection('config').doc('contact_info').get();
+      if (doc.exists) {
+        final url = doc.data()?['appDownloadUrl'];
+        if (url != null && url.toString().isNotEmpty) {
+          await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+        }
+      }
+    } catch (e) {
+      debugPrint("Redirect failed: $e");
+    }
+    // بعد التوجيه أو الفشل، نعود للحالة الطبيعية (ربما يظهر السبلاش)
+    if (mounted) setState(() => isRedirecting = false);
   }
 
   void setLocale(Locale newLocale) => setState(() => locale = newLocale);
@@ -123,9 +160,11 @@ class _MyAppState extends State<MyApp> {
       builder: (context, child) {
         return ConnectivityWrapper(child: child!);
       },
-      home: showPublicProfile 
-          ? PublicPetProfilePage(petId: widget.startPetId!, onOpenApp: enterApp) 
-          : const SplashScreen(),
+      home: isRedirecting 
+          ? const Scaffold(body: Center(child: CircularProgressIndicator(color: Color(0xFFC5A059))))
+          : (showPublicProfile 
+              ? PublicPetProfilePage(petId: widget.startPetId!, onOpenApp: enterApp) 
+              : const SplashScreen()),
     );
   }
 }

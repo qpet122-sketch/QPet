@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:vet/home/home_screen.dart';
 import 'package:vet/home/login_view.dart';
 import 'package:vet/home/onboarding_view.dart';
@@ -47,6 +48,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   }
 
   Future<bool> _checkForUpdate() async {
+    if (kIsWeb) return false; // تجاهل التحديث في نسخة الويب
     try {
       // جلب بيانات الإصدار من Firebase
       final doc = await FirebaseFirestore.instance.collection('config').doc('contact_info').get();
