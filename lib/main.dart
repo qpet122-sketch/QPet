@@ -175,58 +175,98 @@ class _MyAppState extends State<MyApp> {
   }
 }
 
-class DownloadRedirectPage extends StatelessWidget {
+class DownloadRedirectPage extends StatefulWidget {
   const DownloadRedirectPage({super.key});
+
+  @override
+  State<DownloadRedirectPage> createState() => _DownloadRedirectPageState();
+}
+
+class _DownloadRedirectPageState extends State<DownloadRedirectPage> {
+  String? downloadUrl;
+  bool isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchAndRedirect();
+  }
+
+  Future<void> _fetchAndRedirect() async {
+    try {
+      final doc = await FirebaseFirestore.instance.collection('config').doc('contact_info').get();
+      if (doc.exists && mounted) {
+        final url = doc.data()?['appDownloadUrl'];
+        if (url != null && url.toString().isNotEmpty) {
+          setState(() {
+            downloadUrl = url;
+            isLoading = false;
+          });
+          // محاولة بدء التحميل تلقائياً
+          await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+        }
+      }
+    } catch (e) {
+      if (mounted) setState(() => isLoading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     bool isAr = Localizations.localeOf(context).languageCode == 'ar';
     
     return Scaffold(
+      backgroundColor: Colors.white,
       body: Center(
-        child: FutureBuilder<DocumentSnapshot>(
-          future: FirebaseFirestore.instance.collection('config').doc('contact_info').get(),
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const CircularProgressIndicator(color: Color(0xFFC5A059));
-            }
-            
-            final url = snapshot.data?.get('appDownloadUrl') ?? '';
-            
-            return Padding(
-              padding: const EdgeInsets.all(30),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Image.asset('assets/final_logo-Photoroom.png', height: 100),
-                  const SizedBox(height: 40),
-                  Text(
-                    isAr ? 'جاري توجيهك لتحميل التطبيق...' : 'Redirecting to download...',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 20),
-                  if (url.isNotEmpty)
-                    ElevatedButton.icon(
-                      onPressed: () => launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication),
-                      icon: const Icon(Icons.download),
-                      label: Text(isAr ? 'اضغط هنا إذا لم يبدأ التحميل' : 'Click here if download doesn\'t start'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF004040),
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-                      ),
+        child: Padding(
+          padding: const EdgeInsets.all(30),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Image.asset('assets/final_logo-Photoroom.png', height: 120),
+              const SizedBox(height: 40),
+              if (isLoading)
+                const CircularProgressIndicator(color: Color(0xFFC5A059))
+              else ...[
+                Icon(Icons.cloud_download_outlined, size: 60, color: Colors.grey.shade400),
+                const SizedBox(height: 20),
+                Text(
+                  isAr ? 'جاري بدء التحميل...' : 'Starting download...',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  isAr 
+                    ? 'إذا لم يبدأ التحميل خلال ثوانٍ، اضغط على الزر أدناه' 
+                    : 'If download doesn\'t start, please click the button below',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
+                ),
+                const SizedBox(height: 30),
+                if (downloadUrl != null)
+                  ElevatedButton.icon(
+                    onPressed: () => launchUrl(Uri.parse(downloadUrl!), mode: LaunchMode.externalApplication),
+                    icon: const Icon(Icons.download),
+                    label: Text(isAr ? 'بدء التحميل الآن' : 'Start Download Now'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF004040),
+                      foregroundColor: Colors.white,
+                      minimumSize: const Size(250, 60),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                      elevation: 5,
                     ),
-                  const SizedBox(height: 20),
-                  TextButton(
-                    onPressed: () => Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const SplashScreen())),
-                    child: Text(isAr ? 'الاستمرار في نسخة الويب' : 'Continue to Web App'),
                   ),
-                ],
-              ),
-            );
-          },
+                const SizedBox(height: 20),
+                TextButton(
+                  onPressed: () => Navigator.of(context).pushReplacement(
+                    MaterialPageRoute(builder: (_) => const SplashScreen())
+                  ),
+                  child: Text(isAr ? 'الاستمرار في نسخة الويب' : 'Continue to Web App'),
+                ),
+              ],
+            ],
+          ),
         ),
       ),
     );
