@@ -45,17 +45,8 @@ void main() async {
   int colorValue = _prefs?.getInt('themeColor') ?? const Color(0xFFFDF9F5).value;
 
   String? initialPetId;
-  String? redirectDownload;
-
   if (kIsWeb) {
     final uri = Uri.base;
-    final fragment = uri.fragment.toLowerCase();
-    
-    // التحقق من طلب التحميل بشكل أكثر مرونة
-    if (fragment == '/download' || fragment == 'download' || uri.path.endsWith('/download')) {
-      redirectDownload = 'pending';
-    }
-
     if (uri.fragment.contains('/pet/')) {
       initialPetId = uri.fragment.split('/pet/').last;
     } else if (uri.path.contains('/pet/')) {
@@ -70,7 +61,6 @@ void main() async {
     initialLocale: Locale(language),
     initialColor: Color(colorValue),
     startPetId: initialPetId,
-    shouldRedirectDownload: redirectDownload != null,
   ));
 }
 
@@ -78,15 +68,8 @@ class MyApp extends StatefulWidget {
   final Locale initialLocale;
   final Color initialColor;
   final String? startPetId;
-  final bool shouldRedirectDownload;
 
-  const MyApp({
-    super.key, 
-    required this.initialLocale, 
-    required this.initialColor, 
-    this.startPetId,
-    this.shouldRedirectDownload = false,
-  });
+  const MyApp({super.key, required this.initialLocale, required this.initialColor, this.startPetId});
 
   @override
   State<MyApp> createState() => _MyAppState();
@@ -99,7 +82,6 @@ class _MyAppState extends State<MyApp> {
   late Locale locale;
   late Color themeColor;
   bool showPublicProfile = false;
-  bool isRedirecting = false;
 
   @override
   void initState() {
@@ -107,31 +89,6 @@ class _MyAppState extends State<MyApp> {
     locale = widget.initialLocale;
     themeColor = widget.initialColor;
     showPublicProfile = widget.startPetId != null;
-
-    if (widget.shouldRedirectDownload) {
-      _handleDownloadRedirect();
-    }
-  }
-
-  Future<void> _handleDownloadRedirect() async {
-    setState(() => isRedirecting = true);
-    try {
-      final doc = await FirebaseFirestore.instance.collection('config').doc('contact_info').get();
-      if (doc.exists) {
-        final url = doc.data()?['appDownloadUrl'];
-        if (url != null && url.toString().isNotEmpty) {
-          // محاولة التوجيه التلقائي
-          final uri = Uri.parse(url);
-          if (await canLaunchUrl(uri)) {
-            await launchUrl(uri, mode: LaunchMode.externalApplication);
-          }
-        }
-      }
-    } catch (e) {
-      debugPrint("Redirect failed: $e");
-    }
-    // ملاحظة: المتصفحات قد تمنع التوجيه التلقائي بدون حركة من المستخدم
-    // لذا سنترك صفحة التوجيه مفتوحة مع زر يدوي
   }
 
   void setLocale(Locale newLocale) => setState(() => locale = newLocale);
@@ -166,126 +123,9 @@ class _MyAppState extends State<MyApp> {
       builder: (context, child) {
         return ConnectivityWrapper(child: child!);
       },
-           home: isRedirecting 
-          ? const DownloadRedirectPage()
-          : (showPublicProfile 
-              ? PublicPetProfilePage(petId: widget.startPetId!, onOpenApp: enterApp) 
-              : const SplashScreen()),
-    );
-  }
-}
-
-class DownloadRedirectPage extends StatefulWidget {
-  const DownloadRedirectPage({super.key});
-
-  @override
-  State<DownloadRedirectPage> createState() => _DownloadRedirectPageState();
-}
-
-class _DownloadRedirectPageState extends State<DownloadRedirectPage> {
-  @override
-  Widget build(BuildContext context) {
-    bool isAr = Localizations.localeOf(context).languageCode == 'ar';
-    const Color primaryGreen = Color(0xFF004040);
-    const Color royalGold = Color(0xFFC5A059);
-    
-    return Scaffold(
-      backgroundColor: const Color(0xFFFDF9F5),
-      body: StreamBuilder<DocumentSnapshot>(
-        stream: FirebaseFirestore.instance.collection('config').doc('contact_info').snapshots(),
-        builder: (context, snapshot) {
-          if (snapshot.hasError) {
-            return Center(child: Text(isAr ? 'خطأ في الاتصال' : 'Connection Error'));
-          }
-
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator(color: Color(0xFFC5A059)));
-          }
-
-          final data = snapshot.data?.data() as Map<String, dynamic>?;
-          final url = data?['appDownloadUrl']?.toString() ?? '';
-          final version = data?['latestVersion']?.toString() ?? '1.0.0';
-
-          return Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(30),
-              child: Container(
-                constraints: const BoxConstraints(maxWidth: 500),
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(35),
-                  boxShadow: [BoxShadow(color: royalGold.withOpacity(0.1), blurRadius: 30)],
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Image.asset('assets/final_logo-Photoroom.png', height: 100),
-                    const SizedBox(height: 25),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                      decoration: BoxDecoration(color: primaryGreen, borderRadius: BorderRadius.circular(20)),
-                      child: Text(
-                        'Version $version', 
-                        style: const TextStyle(color: royalGold, fontSize: 12, fontWeight: FontWeight.bold)
-                      ),
-                    ),
-                    const SizedBox(height: 30),
-                    Text(
-                      isAr ? 'تطبيق QPet الرسمي' : 'QPet Official App',
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: primaryGreen),
-                    ),
-                    const SizedBox(height: 15),
-                    Text(
-                      isAr 
-                        ? 'انقر على الزر أدناه لتحميل أحدث إصدار للأندرويد' 
-                        : 'Click the button below to download the latest Android version',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
-                    ),
-                    const SizedBox(height: 35),
-                    if (url.isNotEmpty)
-                      ElevatedButton.icon(
-                        onPressed: () => launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication),
-                        icon: const Icon(Icons.download_for_offline_rounded, size: 26),
-                        label: Text(
-                          isAr ? 'تحميل الآن (APK)' : 'Download Now (APK)',
-                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green.shade600,
-                          foregroundColor: Colors.white,
-                          minimumSize: const Size(double.infinity, 65),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-                          elevation: 4,
-                        ),
-                      )
-                    else
-                      Column(
-                        children: [
-                          const Icon(Icons.link_off, color: Colors.red, size: 40),
-                          const SizedBox(height: 10),
-                          Text(isAr ? 'رابط التحميل غير متوفر حالياً' : 'Download link is not available'),
-                        ],
-                      ),
-                    const SizedBox(height: 25),
-                    TextButton(
-                      onPressed: () => Navigator.of(context).pushReplacement(
-                        MaterialPageRoute(builder: (_) => const SplashScreen())
-                      ),
-                      child: Text(
-                        isAr ? 'الاستمرار في نسخة الويب' : 'Continue to Web App',
-                        style: const TextStyle(color: royalGold, fontWeight: FontWeight.w600),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          );
-        }
-      ),
+      home: showPublicProfile 
+          ? PublicPetProfilePage(petId: widget.startPetId!, onOpenApp: enterApp) 
+          : const SplashScreen(),
     );
   }
 }

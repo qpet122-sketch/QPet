@@ -620,9 +620,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _showDownloadQr() {
-    // الرابط الثابت للتوجيه (Dynamic Redirect)
-    const redirectUrl = 'https://qpet122-sketch.github.io/QPet/#/download';
-    
     showDialog(
       context: context, 
       builder: (context) => AlertDialog(
@@ -642,7 +639,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     alignment: Alignment.center,
                     children: [
                       QrImageView(
-                        data: redirectUrl, 
+                        data: appDownloadUrl, 
                         size: 200, 
                         errorCorrectionLevel: QrErrorCorrectLevel.H,
                         eyeStyle: const QrEyeStyle(eyeShape: QrEyeShape.square, color: Colors.black),
@@ -669,7 +666,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _shareAppQr() async {
     try {
-      const redirectUrl = 'https://qpet122-sketch.github.io/QPet/#/download';
       RenderRepaintBoundary boundary = _appQrKey.currentContext!.findRenderObject() as RenderRepaintBoundary;
       ui.Image image = await boundary.toImage(pixelRatio: 3.0);
       ByteData? byteData = await image.toByteData(format: ui.ImageByteFormat.png);
@@ -678,13 +674,13 @@ class _HomeScreenState extends State<HomeScreen> {
       if (kIsWeb) {
         await Share.shareXFiles(
           [XFile.fromData(pngBytes, name: 'app_qr.png', mimeType: 'image/png')],
-          text: 'حمل تطبيق QPet من هنا: $redirectUrl',
+          text: 'حمل تطبيق QPet من هنا: $appDownloadUrl',
         );
       } else {
         final directory = await getTemporaryDirectory();
         final imagePath = await File('${directory.path}/app_qr.png').create();
         await imagePath.writeAsBytes(pngBytes);
-        await Share.shareXFiles([XFile(imagePath.path)], text: 'حمل تطبيق QPet من هنا: $redirectUrl');
+        await Share.shareXFiles([XFile(imagePath.path)], text: 'حمل تطبيق QPet من هنا: $appDownloadUrl');
       }
     } catch (e) {
       debugPrint("Error sharing App QR: $e");
