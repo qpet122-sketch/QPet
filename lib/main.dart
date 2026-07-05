@@ -49,8 +49,10 @@ void main() async {
 
   if (kIsWeb) {
     final uri = Uri.base;
-    // التحقق من طلب التحميل
-    if (uri.fragment == '/download' || uri.path.endsWith('/download')) {
+    final fragment = uri.fragment.toLowerCase();
+    
+    // التحقق من طلب التحميل بشكل أكثر مرونة
+    if (fragment == '/download' || fragment == 'download' || uri.path.endsWith('/download')) {
       redirectDownload = 'pending';
     }
 
@@ -118,14 +120,18 @@ class _MyAppState extends State<MyApp> {
       if (doc.exists) {
         final url = doc.data()?['appDownloadUrl'];
         if (url != null && url.toString().isNotEmpty) {
-          await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+          // محاولة التوجيه التلقائي
+          final uri = Uri.parse(url);
+          if (await canLaunchUrl(uri)) {
+            await launchUrl(uri, mode: LaunchMode.externalApplication);
+          }
         }
       }
     } catch (e) {
       debugPrint("Redirect failed: $e");
     }
-    // بعد التوجيه أو الفشل، نعود للحالة الطبيعية (ربما يظهر السبلاش)
-    if (mounted) setState(() => isRedirecting = false);
+    // ملاحظة: المتصفحات قد تمنع التوجيه التلقائي بدون حركة من المستخدم
+    // لذا سنترك صفحة التوجيه مفتوحة مع زر يدوي
   }
 
   void setLocale(Locale newLocale) => setState(() => locale = newLocale);
@@ -160,11 +166,69 @@ class _MyAppState extends State<MyApp> {
       builder: (context, child) {
         return ConnectivityWrapper(child: child!);
       },
-      home: isRedirecting 
-          ? const Scaffold(body: Center(child: CircularProgressIndicator(color: Color(0xFFC5A059))))
+           home: isRedirecting 
+          ? const DownloadRedirectPage()
           : (showPublicProfile 
               ? PublicPetProfilePage(petId: widget.startPetId!, onOpenApp: enterApp) 
               : const SplashScreen()),
+    );
+  }
+}
+
+class DownloadRedirectPage extends StatelessWidget {
+  const DownloadRedirectPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    bool isAr = Localizations.localeOf(context).languageCode == 'ar';
+    
+    return Scaffold(
+      body: Center(
+        child: FutureBuilder<DocumentSnapshot>(
+          future: FirebaseFirestore.instance.collection('config').doc('contact_info').get(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const CircularProgressIndicator(color: Color(0xFFC5A059));
+            }
+            
+            final url = snapshot.data?.get('appDownloadUrl') ?? '';
+            
+            return Padding(
+              padding: const EdgeInsets.all(30),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Image.asset('assets/final_logo-Photoroom.png', height: 100),
+                  const SizedBox(height: 40),
+                  Text(
+                    isAr ? 'جاري توجيهك لتحميل التطبيق...' : 'Redirecting to download...',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 20),
+                  if (url.isNotEmpty)
+                    ElevatedButton.icon(
+                      onPressed: () => launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication),
+                      icon: const Icon(Icons.download),
+                      label: Text(isAr ? 'اضغط هنا إذا لم يبدأ التحميل' : 'Click here if download doesn\'t start'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF004040),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                      ),
+                    ),
+                  const SizedBox(height: 20),
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const SplashScreen())),
+                    child: Text(isAr ? 'الاستمرار في نسخة الويب' : 'Continue to Web App'),
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
+      ),
     );
   }
 }
