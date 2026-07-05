@@ -194,15 +194,24 @@ class _DownloadRedirectPageState extends State<DownloadRedirectPage> {
       body: StreamBuilder<DocumentSnapshot>(
         stream: FirebaseFirestore.instance.collection('config').doc('contact_info').snapshots(),
         builder: (context, snapshot) {
-          final url = snapshot.data?.get('appDownloadUrl') ?? '';
-          final version = snapshot.data?.get('latestVersion') ?? '1.0.0';
+          if (snapshot.hasError) {
+            return Center(child: Text(isAr ? 'خطأ في الاتصال' : 'Connection Error'));
+          }
+
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator(color: Color(0xFFC5A059)));
+          }
+
+          final data = snapshot.data?.data() as Map<String, dynamic>?;
+          final url = data?['appDownloadUrl']?.toString() ?? '';
+          final version = data?['latestVersion']?.toString() ?? '1.0.0';
 
           return Center(
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(30),
               child: Container(
                 constraints: const BoxConstraints(maxWidth: 500),
-                padding: const EdgeInsets.all(40),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(35),
@@ -211,8 +220,8 @@ class _DownloadRedirectPageState extends State<DownloadRedirectPage> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Image.asset('assets/final_logo-Photoroom.png', height: 120),
-                    const SizedBox(height: 30),
+                    Image.asset('assets/final_logo-Photoroom.png', height: 100),
+                    const SizedBox(height: 25),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                       decoration: BoxDecoration(color: primaryGreen, borderRadius: BorderRadius.circular(20)),
@@ -221,45 +230,52 @@ class _DownloadRedirectPageState extends State<DownloadRedirectPage> {
                         style: const TextStyle(color: royalGold, fontSize: 12, fontWeight: FontWeight.bold)
                       ),
                     ),
-                    const SizedBox(height: 40),
+                    const SizedBox(height: 30),
                     Text(
                       isAr ? 'تطبيق QPet الرسمي' : 'QPet Official App',
                       textAlign: TextAlign.center,
-                      style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: primaryGreen),
+                      style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: primaryGreen),
                     ),
                     const SizedBox(height: 15),
                     Text(
-                      isAr ? 'اضغط على الزر أدناه لبدء تحميل أحدث نسخة من التطبيق' : 'Click the button below to start downloading the latest version',
+                      isAr 
+                        ? 'انقر على الزر أدناه لتحميل أحدث إصدار للأندرويد' 
+                        : 'Click the button below to download the latest Android version',
                       textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 15, color: Colors.grey.shade600),
+                      style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
                     ),
-                    const SizedBox(height: 40),
+                    const SizedBox(height: 35),
                     if (url.isNotEmpty)
                       ElevatedButton.icon(
                         onPressed: () => launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication),
-                        icon: const Icon(Icons.file_download_rounded, size: 28),
+                        icon: const Icon(Icons.download_for_offline_rounded, size: 26),
                         label: Text(
-                          isAr ? 'تحميل التطبيق الآن' : 'Download APK Now',
-                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                          isAr ? 'تحميل الآن (APK)' : 'Download Now (APK)',
+                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                         ),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green.shade700,
+                          backgroundColor: Colors.green.shade600,
                           foregroundColor: Colors.white,
-                          minimumSize: const Size(double.infinity, 70),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                          elevation: 8,
-                          shadowColor: Colors.green.withOpacity(0.4),
+                          minimumSize: const Size(double.infinity, 65),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                          elevation: 4,
                         ),
                       )
                     else
-                      const CircularProgressIndicator(color: royalGold),
-                    const SizedBox(height: 30),
+                      Column(
+                        children: [
+                          const Icon(Icons.link_off, color: Colors.red, size: 40),
+                          const SizedBox(height: 10),
+                          Text(isAr ? 'رابط التحميل غير متوفر حالياً' : 'Download link is not available'),
+                        ],
+                      ),
+                    const SizedBox(height: 25),
                     TextButton(
                       onPressed: () => Navigator.of(context).pushReplacement(
                         MaterialPageRoute(builder: (_) => const SplashScreen())
                       ),
                       child: Text(
-                        isAr ? 'أو الاستمرار في نسخة الويب' : 'Or continue to Web App',
+                        isAr ? 'الاستمرار في نسخة الويب' : 'Continue to Web App',
                         style: const TextStyle(color: royalGold, fontWeight: FontWeight.w600),
                       ),
                     ),
