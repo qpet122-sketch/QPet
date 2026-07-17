@@ -14,6 +14,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "582369930164-p4fttss95tkstbkjnarotmc8srvauol0.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.qpet.app",
+            "certificate_hash": "f3e83e9985daecc07bad41c93c1754b3a804babc"
+          }
+        },
+        {
           "client_id": "582369930164-5noked6uv2mkrus9334akofqho03urmq.apps.googleusercontent.com",
           "client_type": 3
         }
