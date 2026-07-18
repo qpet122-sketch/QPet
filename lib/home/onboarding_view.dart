@@ -18,6 +18,13 @@ class _OnboardingViewState extends State<OnboardingView> {
 
   final List<OnboardingItem> _items = [
     OnboardingItem(
+      titleAr: 'هوية رقمية ذكية',
+      titleEn: 'Smart Digital Identity',
+      descAr: 'أنشئ بروفايل رقمي لأليفك مع كود QR لسهولة التعرف عليه والوصول لبياناته.',
+      descEn: 'Create a digital profile for your pet with a QR code for easy identification.',
+      image: 'assets/onboarding3.png',
+    ),
+    OnboardingItem(
       titleAr: 'متجر QPet المتكامل',
       titleEn: 'QPet All-in-One Shop',
       descAr: 'تسوق أفضل المنتجات والمستلزمات لأليفك بسهولة وأمان.',
@@ -31,13 +38,7 @@ class _OnboardingViewState extends State<OnboardingView> {
       descEn: 'We provide everything your pet needs from food, accessories, and medical care.',
       image: 'assets/onboarding2.jpg',
     ),
-    OnboardingItem(
-      titleAr: 'هوية رقمية ذكية',
-      titleEn: 'Smart Digital Identity',
-      descAr: 'أنشئ بروفايل رقمي لأليفك مع كود QR لسهولة التعرف عليه والوصول لبياناته.',
-      descEn: 'Create a digital profile for your pet with a QR code for easy identification.',
-      image: 'assets/onboarding3.png',
-    ),
+
   ];
 
   void _finishOnboarding() async {
